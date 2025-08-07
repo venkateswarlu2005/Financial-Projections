@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+.sidebar {
+  font-family: 'Poppins', sans-serif;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 240px;
+  background-color: #fff;
+  border-right: 1px solid #eee;
+  transition: width 0.3s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+}
+
+.sidebar.collapsed {
+  width: 100px;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  
+  height: 64px;
+  box-sizing: border-box;
+}
+
+.logo {
+  max-width: 180px;
+  height: auto;
+  transition: width 0.3s ease;
+}
+
+.sidebar.collapsed .logo {
+  max-width: 40px;
+}
+
+
+.toggle-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+}
+.toggle-btn:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+
+.arrow-icon {
+  font-size: 24px;
+  color: #333;
+  transition: transform 0.3s ease;
+}
+
+.arrow-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.menu-section {
+  margin-top: 10px;
+}
+
+.section-title {
+  font-size: 12px;
+  color: #888;
+  margin: 10px 20px 5px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  color: #333;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+  border-radius: 30px;
+  margin: 4px 12px;
+}
+
+.menu-item .icon {
+  font-size: 20px;
+  margin-right: 12px;
+}
+
+.sidebar.collapsed .menu-item.active {
+  background-color: #ed7d22;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  justify-content: center;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0;
+}
+
+.sidebar.collapsed .menu-item.active .icon {
+  margin-right: 0;
+}
+
+
+.menu-item.active {
+  background-color: #ed7d22;
+  color: #fff;
+  font-weight: 600;
+}
+
+.menu-item.active .icon {
+  color: #fff;
+}
+.sidebar.collapsed .menu-item {
+  transition: none;
+}
+
+.sidebar.collapsed .menu-item .icon {
+  transition: none;
+}

@@ -1,0 +1,174 @@
+/* Import Poppins font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+
+/* Apply font globally */
+* {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Page background */
+.page-background {
+  min-height: 100vh;
+  padding: 40px;
+  background: #fef2e8;
+}
+
+/* Main container */
+.main-container {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+
+/* Headings and paragraphs */
+/* Headings and paragraphs */
+.main-container h5 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 23px; /* gap between h5 and p */
+}
+
+
+.main-container p {
+  font-size: 1rem;
+  margin-bottom: 20px;
+}
+
+
+
+/* Info icon */
+.info-icon {
+  font-size: 18px; /* Slightly bigger */
+  color: #888;
+  cursor: pointer;
+}
+
+/* Scenario card */
+.scenario-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Border colors */
+.border-warning { border-color: #f4b76d !important; }
+.border-success { border-color: #4caf50 !important; }
+.border-primary { border-color: #2196f3 !important; }
+
+/* Metric styles */
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metric-label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metric-label span {
+  transform: translateY(-15px);
+  display: inline-block;
+}
+
+.metric-value {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-left: 48px; /* Adjusted for bigger icons */
+  transform: translateY(-15px);
+}
+
+.metric-value span:first-child {
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+/* Circle background for metric icons */
+.icon-circle {
+  width: 40px; /* Bigger size */
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem; /* Icon size inside */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15); /* Subtle shadow */
+}
+
+.icon-revenue { background-color: #ffe4d6; color: #ff6f43; }
+.icon-customer { background-color: #e4f5e8; color: #4caf50; }
+.icon-ratio { background-color: #dbeeff; color: #2196f3; }
+
+/* Change pill */
+.change-pill {
+  background: #f0f0f0;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #4caf50;
+}
+
+.change-pill svg {
+  background: #e4f5e8;
+  border-radius: 50%;
+  padding: 2px;
+}
+/* Pill-style scenario badge */
+.scenario-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* The colored dot */
+.scenario-badge .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Base Case */
+.badge-warning {
+  background-color: #fff7ec !important; /* Light background */
+  color: #e6861a !important;
+}
+.badge-warning .dot {
+  background-color: #e6861a;
+}
+
+/* Current Case */
+.badge-success {
+  background-color: #e9f7ef !important;
+  color: #28a745 !important;
+}
+.badge-success .dot {
+  background-color: #28a745;
+}
+
+/* Saved Case */
+.badge-primary {
+  background-color: #e7f1fb !important;
+  color: #007bff !important;
+}
+.badge-primary .dot {
+  background-color: #007bff;
+}

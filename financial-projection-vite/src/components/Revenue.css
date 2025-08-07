@@ -1,0 +1,254 @@
+/* === Revenue Table Styles === */
+.my-heading, .info-icon, .dropdown-toggle, .dropdown-menu {
+  font-family: 'Poppins', sans-serif;
+}
+
+
+table thead th.metrics-header {
+  background-color: #feefea;
+  border-radius: 999px ;
+  font-weight: 600;
+  color: #ed7d22;
+  text-align: left;
+}
+
+table thead th.quarter-header {
+  background-color: #feefea;
+  font-weight: 600;
+  color: #ed7d22;
+  text-align: center;
+  border-radius: 999px;
+}
+
+table tbody td {
+  background-color: white !important;
+  vertical-align: middle;
+  text-align: center;
+  font-size: 14px;
+}
+/* Add spacing between table rows */
+.table tbody tr {
+  border-bottom: 1px solid #dee2e6; /* light grey line between rows */
+}
+
+.table td {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+
+table tbody td:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+table.table-hover tbody tr:hover td {
+   background-color: transparent !important;
+}
+
+.revenue-table {
+  border-collapse: collapse;
+  width: 100%;
+  border-spacing: 0 0.1rem;
+}
+/* Add vertical spacing to each table row */
+.revenue-table tbody tr {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  height: 60px; /* Optional: ensures consistent row height */
+}
+
+/* Optional: improve spacing inside input fields */
+.revenue-table input.form-control-sm {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+/* === Pill Toggle Buttons === */
+.pill-toggle-btn {
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  background: #fff;
+  padding: 6px 14px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  cursor: pointer;
+  color: #000;
+}
+.info-icon {
+  font-size: 18px; /* reduce the icon size */
+  margin-left: 6px; /* add some spacing */
+  vertical-align: top;
+ 
+  
+}
+
+
+.pill-toggle-btn.active {
+  border-color: #ed7d22;
+
+  color: #ed7d22;
+}
+
+.pill-toggle-btn:hover {
+  background-color: #f9f9f9;
+}
+
+.pill-toggle-btn .dropdown-arrow {
+  margin-left: 4px;
+}
+
+.pill-toggle-btn.no-dot .circle-indicator {
+  display: none;
+}
+
+/* Circle radio indicator inside pill */
+.circle-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #ed7d22;
+  background-color: transparent;
+  transition: background-color 0.3s ease;
+}
+
+.pill-toggle-btn.active .circle-indicator {
+  background-color: #ed7d22;
+}
+
+/* Dropdown Styles */
+.custom-dropdown {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 16px;
+  padding: 8px 0;
+  z-index: 10;
+  min-width: 160px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-item-pill {
+  padding: 6px 14px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 999px;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.dropdown-item-pill:hover {
+  background-color: #feefea;
+}
+
+.radio-circle {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #ed7d22;
+  background-color: transparent;
+  transition: background-color 0.3s ease;
+}
+
+.radio-circle.filled {
+  background-color: #ed7d22;
+}
+
+/* Label text */
+.pill-label {
+  font-size: 14px;
+  line-height: 1;
+}
+/* Add this to your Revenue.css */
+
+
+.revenue-table tbody tr {
+  border-bottom: 1px solid #ddd;
+}
+
+/* Optional: Prevent extra space inside cells */
+.revenue-table td, .revenue-table th {
+  padding: 12px;
+}
+/* Borderless form control */
+.revenue-table input.form-control-sm {
+  border: none;
+  background-color: transparent;
+  text-align: center;
+  font-size: 14px;
+  padding: 4px 0;
+  box-shadow: none;
+}
+
+.revenue-table input.form-control-sm:focus {
+  outline: none;
+  box-shadow: none;
+  border-bottom: 1px solid #ccc; /* Optional: subtle focus indicator */
+}
+.revenue-table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background-color: #fff;
+    caret-color: transparent;
+}
+.table-wrapper {
+ max-width: 90%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* soft shadow */
+  border-radius: 12px;
+  padding: 8px; /* reduced from 16px */
+ margin: 24px auto;
+  background-color: #fff;
+  
+}
+
+.revenue-table tbody tr.gap-row td {
+  height: 16px; /* this gives vertical space */
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+
+.revenue{
+    background-color: #fef2e8;
+}
+.chart-section {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.chart-card {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  flex: 1 1 48%;
+  min-width: 300px;
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.chart-placeholder {
+  height: 200px;
+  background: linear-gradient(to bottom, #ffe5e5, #ffffff);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+  font-size: 14px;
+}

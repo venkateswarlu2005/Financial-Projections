@@ -1,0 +1,212 @@
+/* === GLOBAL === */
+/* Main stress testing container background */
+/* Make the whole section full height & width with soft background */
+.stress-testing {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #fef2e8;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column; /* <- ADD THIS */
+  justify-content: flex-start; /* <- change from center to top align */
+  align-items: center; /* <- keep items centered horizontally */
+  font-family: 'Poppins', sans-serif;
+  box-sizing: border-box;
+}
+
+
+/* White rounded container inside */
+.stress-box {
+  background-color: #ffffff;
+  border-radius: 40px;
+  padding: 2rem;
+  box-shadow: 0 8px 24px rgba(237, 125, 34, 0.12);
+  width: 100%;
+  
+  box-sizing: border-box;
+}
+
+.no-gap {
+  gap: 0 !important;
+}
+
+/* === Typography === */
+.upper-text {
+  font-family: 'Poppins', sans-serif;
+}
+
+.upper-text h6 {
+  font-size: 1.1rem;
+  font-family: 'Poppins', sans-serif;
+}
+
+.upper-text p {
+  font-size: 0.9rem;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* === Select + Dropdown Styling === */
+.pill-select,
+.pill-dropdown {
+  border-radius: 999px !important;
+  font-size: 1rem !important;
+  padding: 0.4rem 0.8rem !important;
+  height: 40px !important;
+   max-width: 50%; 
+  display: flex;
+  align-items: center;
+  font-family: 'Poppins', sans-serif;
+}
+
+.pill-select {
+  margin-right: 0 !important;
+  margin-bottom: 0 !important;
+  border-color: #ed7d22;
+}
+/* Custom tighter spacing between dropdowns aligned to right */
+.dropdown-row {
+  gap: 0.5rem;
+  align-items: left;
+  justify-content: flex-left;
+}
+
+
+
+.dropdown-menu .dropdown-item {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.85rem;
+}
+.dropdown-menu {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* === Download Button Styling === */
+.pill-download-btn {
+  border-radius: 999px;
+  font-size: 0.9rem;
+  padding: 0.5rem 1.2rem;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #fff;
+  border: 1px solid #ccc;
+  font-family: 'Poppins', sans-serif;
+}
+/* Remove Bootstrap default caret and background from dropdown toggle */
+.pill-dropdown .dropdown-toggle::after {
+  display: none !important;
+}
+
+.pill-dropdown .dropdown-toggle {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* === Label Under Slider === */
+.base-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #f48fb1;
+  padding-top: 40px;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* === PrimeReact Slider Styling === */
+.p-slider {
+  position: relative;
+  height: 0.5rem;
+  background-color: #e0e0e0;
+  border-radius: 1rem;
+}
+
+.p-slider .p-slider-range {
+  background-color: #ed7d31 !important;
+  border-radius: 1rem;
+}
+
+.p-slider .p-slider-handle {
+  background-color: #ffffff !important;     /* White thumb */
+  border: 3px solid #ed7d22 !important;     /* Orange border */
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+  margin-top: -0.65rem !important;
+  border-radius: 50% !important;
+  z-index: 2;
+  position: relative;
+  transition: transform 0.2s ease;
+  cursor: grab;
+}
+
+
+.p-slider .p-slider-handle:hover {
+  transform: scale(1.15);
+}
+
+/* === Floating Percentage Label === */
+.percentage-label {
+  position: absolute;
+  top: 35px;
+  background: #fff;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #333;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  font-family: 'Poppins', sans-serif;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  z-index: 3;
+}
+/* === Pill Buttons Below Stress Box === */
+.pill-btn {
+  border-radius: 999px;
+  font-size: 0.9rem;
+  padding: 0.6rem 1.5rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  border: none;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.pill-btn i {
+  font-size: 1rem;
+}
+
+.pill-run {
+  background: linear-gradient(135deg, #fff6f0, #ffe5d1);
+  border: 1px solid #f9b88f;
+  color: #000;
+
+}
+
+.pill-run:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pill-outline {
+  background-color: #fff;
+  border: 1px solid #ccc;
+  color: #333;
+}
+
+.pill-outline:hover {
+  background-color: #f6f6f6;
+}
+.button-row {
+  display: flex;
+  justify-content: flex-end;  /* Align to right */
+  gap: 1rem;
+  margin-top: 2rem;
+  width: 100%; /* Ensure it spans full width to allow right alignment */
+}
+
