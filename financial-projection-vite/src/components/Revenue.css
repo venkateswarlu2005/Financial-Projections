@@ -252,3 +252,25 @@ table.table-hover tbody tr:hover td {
   color: #aaa;
   font-size: 14px;
 }
+.revenue-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* First column wider for metrics text */
+.revenue-table th.metrics-header,
+.revenue-table td:first-child {
+  width: 40%;  /* adjust as needed */
+  white-space: normal; /* allow wrapping if needed */
+}
+
+/* Remaining columns split evenly */
+.revenue.quarter-view .revenue-table th.quarter-header,
+.revenue.quarter-view .revenue-table td:not(:first-child) {
+  width: calc(60% / 4); /* 4 quarters */
+}
+
+.revenue.year-view .revenue-table th.quarter-header,
+.revenue.year-view .revenue-table td:not(:first-child) {
+  width: calc(60% / 3); /* 3 years */
+}
