@@ -3,6 +3,7 @@ import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
+
 const metricItems = [
   { label: "Average Brokerage Per User Per Trade", type: "input" },
   { label: "Average No of Trades Per Day Per User", type: "input" },
@@ -47,6 +48,7 @@ const Revenue: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
   const [sheetData, setSheetData] = useState<
     Record<string, Record<string, { value: number; is_calculated: boolean }>>
   >({});
@@ -56,15 +58,27 @@ const Revenue: React.FC = () => {
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
 
+  const getDisplayedQuarters = () => {
+    if (viewMode === "quarter") {
+      return quarters.map((q, i) => ({
+        label: q,
+        key: getQuarterKey(selectedYear, i),
+      }));
+    } else {
+      return ["Year 1", "Year 2", "Year 3"].map((year, i) => ({
+        label: `Y${i + 1}`,
+        key: `Y${i + 1}Q4`,
+      }));
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -72,6 +86,7 @@ const Revenue: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       const yearNum = selectedYear.replace("Year ", "");
+
       try {
         const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
         const data = await response.json();
@@ -85,56 +100,53 @@ const Revenue: React.FC = () => {
   }, [selectedYear]);
 
   const handleInputChange = async (
-  fieldName: string,
-  quarterIdx: number,
-  event: React.ChangeEvent<HTMLInputElement>
-) => {
-  const newValue = parseFloat(event.target.value) || 0;
-  const yearNum = parseInt(selectedYear.replace("Year ", ""));
-  const quarterKey = getQuarterKey(selectedYear, quarterIdx);
+    fieldName: string,
+    quarterIdx: number,
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const newValue = parseFloat(event.target.value) || 0;
+    const yearNum = parseInt(selectedYear.replace("Year ", ""));
+    const quarterKey = getQuarterKey(selectedYear, quarterIdx);
 
-  // Optimistically update the UI
-  setSheetData((prev) => ({
-    ...prev,
-    [fieldName]: {
-      ...prev[fieldName],
-      [quarterKey]: {
-        ...prev[fieldName]?.[quarterKey],
-        value: newValue,
-        is_calculated: false,
+    setSheetData((prev) => ({
+      ...prev,
+      [fieldName]: {
+        ...prev[fieldName],
+        [quarterKey]: {
+          ...prev[fieldName]?.[quarterKey],
+          value: newValue,
+          is_calculated: false,
+        },
       },
-    },
-  }));
+    }));
 
-  try {
-    const response = await fetch("http://localhost:8000/api/update-cell", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        company_id: 1,
-        sheet_type: sheetType,
-        field_name: fieldName,
-        year_num: yearNum,
-        quarter_num: quarterIdx + 1,
-        value: newValue,
-      }),
-    });
+    try {
+      const response = await fetch("http://localhost:8000/api/update-cell", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company_id: 1,
+          sheet_type: sheetType,
+          field_name: fieldName,
+          year_num: yearNum,
+          quarter_num: quarterIdx + 1,
+          value: newValue,
+        }),
+      });
 
-    const result = await response.json();
+      const result = await response.json();
 
-    if (response.ok && result.status === "success") {
-      // Refresh the sheet data to get any recalculated fields
-      const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-      const updatedData = await updated.json();
-      setSheetData(updatedData);
-    } else {
-      console.error("Error updating cell:", result.message);
+      if (response.ok && result.status === "success") {
+        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const updatedData = await updated.json();
+        setSheetData(updatedData);
+      } else {
+        console.error("Error updating cell:", result.message);
+      }
+    } catch (error) {
+      console.error("Update error:", error);
     }
-  } catch (error) {
-    console.error("Update error:", error);
-  }
-};
-
+  };
 
   return (
     <div className="revenue">
@@ -159,9 +171,7 @@ const Revenue: React.FC = () => {
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
               Revenue Streams & Income{" "}
-              <span className="info-icon">
-                <BsInfoCircleFill />
-              </span>
+              <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
@@ -218,13 +228,12 @@ const Revenue: React.FC = () => {
             <thead>
               <tr>
                 <th className="metrics-header">Metrics</th>
-                {quarters.map((q, i) => (
-                  <th key={i} className="quarter-header">
-                    {q}
-                  </th>
+                {getDisplayedQuarters().map((q, i) => (
+                  <th key={i} className="quarter-header">{q.label}</th>
                 ))}
               </tr>
             </thead>
+
             <tbody>
               {metricItems.map((metric, idx) => (
                 <React.Fragment key={idx}>
@@ -235,15 +244,15 @@ const Revenue: React.FC = () => {
                         {metric.type === "input" ? "Input" : "Auto"}
                       </div>
                     </td>
-                    {quarters.map((_, qIdx) => {
-                      const quarterKey = getQuarterKey(selectedYear, qIdx);
-                      const metricData = sheetData?.[metric.label]?.[quarterKey];
+
+                    {getDisplayedQuarters().map((q, qIdx) => {
+                      const metricData = sheetData?.[metric.label]?.[q.key];
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
 
                       return (
                         <td key={qIdx}>
-                          {!isCalculated ? (
+                          {metric.type === "input" && !isCalculated && viewMode === "quarter" ? (
                             <input
                               type="number"
                               className="form-control form-control-sm"
@@ -257,6 +266,7 @@ const Revenue: React.FC = () => {
                       );
                     })}
                   </tr>
+
                   {metric.addGapAfter && (
                     <tr className="gap-row">
                       <td colSpan={quarters.length + 1}></td>
