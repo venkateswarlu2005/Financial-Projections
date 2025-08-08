@@ -17,6 +17,7 @@ import Valuation from './components/Valuation';
 import ScenarioAnalysis from './components/ScenarioAnalysis';
 import StressTesting from './components/StressTesting';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import Financial from './components/Financial';
 
 
 function App() {
@@ -47,6 +48,7 @@ function App() {
               <Route path="/valuation" element={<Valuation/>} />
               <Route path="/stress-testing" element={<StressTesting />} />
               <Route path="/scenario-analysis" element={<ScenarioAnalysis />} />
+              <Route path="/financial" element={<Financial />} />
             </Routes>
           </div>
         </div>

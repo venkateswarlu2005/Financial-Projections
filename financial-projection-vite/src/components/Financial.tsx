@@ -1,94 +1,21 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import "./Revenue.css"; // Reuse Revenue styles
 import { BsInfoCircleFill } from "react-icons/bs";
-import "./Revenue.css"; // Reuse the same styles
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
-const Metrics = [
-  { name: "Core Management Count", type: "input" },
-  { name: "Core Management Average Salary", type: "input" },
-  { name: "Domain Specific Head Count", type: "input" },
-  { name: "Domain Specific Head Average Salary", type: "input" },
-  { name: "Cluster Heads Count", type: "input" },
-  { name: "Cluster Heads Average Salary", type: "input" },
-  { name: "Management & Domain Expert Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Economists Count", type: "input" },
-  { name: "Economists Average Salary", type: "input" },
-  { name: "Technical Analysts Count", type: "input" },
-  { name: "Technical Analysts Average Salary", type: "input" },
-  { name: "Fundamental Analysts Count", type: "input" },
-  { name: "Fundamental Analysts Average Salary", type: "input" },
-  { name: "Business Analysts Count", type: "input" },
-  { name: "Business Analysts Average Salary", type: "input" },
-  { name: "Quant Analysts Count", type: "input" },
-  { name: "Quant Analysts Average Salary", type: "input" },
-  { name: "Data Scientists Count", type: "input" },
-  { name: "Data Scientists Average Salary", type: "input" },
-  { name: "Subject Level Expert Cost", type: "calculated" },
-
-  { name: "Independent Directors Count", type: "input" },
-  { name: "Independent Directors Average Salary", type: "input" },
-  { name: "Board of Directors Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Marketing Head Count", type: "input" },
-  { name: "Marketing Head Average Salary", type: "input" },
-  { name: "BD Head Count", type: "input" },
-  { name: "BD Head Average Salary", type: "input" },
-  { name: "Accounts Head Count", type: "input" },
-  { name: "Accounts Head Average Salary", type: "input" },
-  { name: "HR Head Count", type: "input" },
-  { name: "HR Head Average Salary", type: "input" },
-  { name: "IT Head Count", type: "input" },
-  { name: "IT Head Average Salary", type: "input" },
-  { name: "Cyber Security Head Count", type: "input" },
-  { name: "Cyber Security Head Average Salary", type: "input" },
-  { name: "Compliance Head Count", type: "input" },
-  { name: "Compliance Head Average Salary", type: "input" },
-  { name: "Investment Head Count", type: "input" },
-  { name: "Investment Head Average Salary", type: "input" },
-  { name: "Commercial Head Count", type: "input" },
-  { name: "Commercial Head Average Salary", type: "input" },
-  { name: "Technology Head Count", type: "input" },
-  { name: "Technology Head Average Salary", type: "input" },
-  { name: "Functional Heads Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Senior Developers Count", type: "input" },
-  { name: "Senior Developers Average Salary", type: "input" },
-  { name: "Junior Developers Count", type: "input" },
-  { name: "Junior Developers Average Salary", type: "input" },
-  { name: "Testers Count", type: "input" },
-  { name: "Testers Average Salary", type: "input" },
-  { name: "Designers Count", type: "input" },
-  { name: "Designers Average Salary", type: "input" },
-  { name: "Engineering Team Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Marketing Managers Count", type: "input" },
-  { name: "Marketing Managers Average Salary", type: "input" },
-  { name: "Marketing Executives Count", type: "input" },
-  { name: "Marketing Executives Average Salary", type: "input" },
-  { name: "RMs Count", type: "input" },
-  { name: "RMs Average Salary", type: "input" },
-  { name: "Marketing Team Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Compliance Officers Count", type: "input" },
-  { name: "Compliance Officers Average Salary", type: "input" },
-  { name: "Grievance Officer Count", type: "input" },
-  { name: "Grievance Officer Average Salary", type: "input" },
-  { name: "Compliance Team Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Research Engineers Count", type: "input" },
-  { name: "Research Engineers Average Salary", type: "input" },
-  { name: "R&D Team Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Support Executives Count", type: "input" },
-  { name: "Support Executives Average Salary", type: "input" },
-  { name: "Support Staff Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Total Salary Cost", type: "calculated" }
+const capexMetrics = [
+  { label: "Total Revenue", type: "auto" },
+  { label: "Total Salary Cost", type: "auto" },
+  { label: "Total tech & OpEx", type: "auto"},
+  { label: "Total Customer Acquisition Spends", type: "auto" },
+  { label: "M&A Costs", type: "auto" },
+  { label: "Total Operating Costs", type: "auto" , addGapAfter: true },
+    { label: "EBIDTA", type: "auto" },
+      { label: "EBIDTA(%)", type: "auto" }
 ];
 
-const Salaries: React.FC = () => {
+const Financial: React.FC = () => {
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -98,7 +25,7 @@ const Salaries: React.FC = () => {
     Record<string, Record<string, { value: number; is_calculated: boolean }>>
   >({});
 
-  const sheetType = "salaries";
+  const sheetType = "financials";
 
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
@@ -195,14 +122,14 @@ const Salaries: React.FC = () => {
       <div className="chart-section mb-4 d-flex gap-3 flex-wrap">
         <div className="chart-card flex-fill">
           <h6 className="chart-title d-flex justify-content-between">
-            Salary Growth Trend <span className="info-icon"><BsInfoCircleFill /></span>
+            Financial Trend <span className="info-icon"><BsInfoCircleFill /></span>
           </h6>
           <div className="chart-placeholder">[ Line Chart Placeholder ]</div>
         </div>
 
         <div className="chart-card flex-fill">
           <h6 className="chart-title d-flex justify-content-between">
-            Avg Salary per Employee <span className="info-icon"><BsInfoCircleFill /></span>
+            Valuation Metrics <span className="info-icon"><BsInfoCircleFill /></span>
           </h6>
           <div className="chart-placeholder">[ Bar + Line Chart Placeholder ]</div>
         </div>
@@ -212,7 +139,7 @@ const Salaries: React.FC = () => {
         <div className="container mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
-              Salaries <span className="info-icon"><BsInfoCircleFill /></span>
+              Financial Metrics <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
@@ -226,6 +153,7 @@ const Salaries: React.FC = () => {
                 >
                   <span className="circle-indicator" />
                   <span className="pill-label">Quarter Wise</span>
+                  
                 </button>
 
                 {showDropdown && (
@@ -273,18 +201,20 @@ const Salaries: React.FC = () => {
                 ))}
               </tr>
             </thead>
+
             <tbody>
-              {Metrics.map((metric, idx) => (
+              {capexMetrics.map((metric, idx) => (
                 <React.Fragment key={idx}>
                   <tr className="align-middle">
                     <td>
-                      <div className="mb-1">{metric.name}</div>
+                      <div className="mb-1">{metric.label}</div>
                       <div className="text-muted" style={{ fontSize: "12px" }}>
                         {metric.type === "input" ? "Input" : "Auto"}
                       </div>
                     </td>
+
                     {getDisplayedQuarters().map((q, qIdx) => {
-                      const metricData = sheetData?.[metric.name]?.[q.key];
+                      const metricData = sheetData?.[metric.label]?.[q.key];
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
 
@@ -295,7 +225,7 @@ const Salaries: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              onChange={(e) => handleInputChange(metric.name, qIdx, e)}
+                              onChange={(e) => handleInputChange(metric.label, qIdx, e)}
                             />
                           ) : (
                             <span>{value.toLocaleString("en-IN")}</span>
@@ -304,6 +234,7 @@ const Salaries: React.FC = () => {
                       );
                     })}
                   </tr>
+
                   {metric.addGapAfter && (
                     <tr className="gap-row">
                       <td colSpan={quarters.length + 1}></td>
@@ -319,4 +250,4 @@ const Salaries: React.FC = () => {
   );
 };
 
-export default Salaries;
+export default Financial;

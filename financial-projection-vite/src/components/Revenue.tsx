@@ -185,7 +185,6 @@ const Revenue: React.FC = () => {
                 >
                   <span className="circle-indicator" />
                   <span className="pill-label">Quarter Wise</span>
-                  <span className="dropdown-arrow">▾</span>
                 </button>
 
                 {showDropdown && (

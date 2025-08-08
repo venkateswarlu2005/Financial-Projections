@@ -2,36 +2,36 @@ import React, { useState, useRef, useEffect } from "react";
 import "./Revenue.css"; // Reuse Revenue styles
 import { BsInfoCircleFill } from "react-icons/bs";
 
-const periods = ["Q1", "Q2", "Q3", "Q4"];
+const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
 const growthMetrics = [
-  { name: "Search Engine & GPT Marketing Spends", type: "input" },
-  { name: "Average Reach from Search", type: "input", addGapAfter: true },
+  { label: "Search Engine & GPT Marketing Spends", type: "input" },
+  { label: "Average Reach from Search", type: "input", addGapAfter: true },
 
-  { name: "Social Media Marketing Spends (Ads)", type: "input" },
-  { name: "Average Reach from Social Ads", type: "input", addGapAfter: true },
+  { label: "Social Media Marketing Spends (Ads)", type: "input" },
+  { label: "Average Reach from Social Ads", type: "input", addGapAfter: true },
 
-  { name: "Social Media Campaigns (Strategy & Design Spends)", type: "input" },
-  { name: "Average Reach from Social Campaigns", type: "input", addGapAfter: true },
+  { label: "Social Media Campaigns (Strategy & Design Spends)", type: "input" },
+  { label: "Average Reach from Social Campaigns", type: "input", addGapAfter: true },
 
-  { name: "ATL Campaigns Spends", type: "input" },
-  { name: "Average Reach from ATL", type: "input", addGapAfter: true },
+  { label: "ATL Campaigns Spends", type: "input" },
+  { label: "Average Reach from ATL", type: "input", addGapAfter: true },
 
-  { name: "Total Spends on Customer Acquisition", type: "calculated", addGapAfter: true },
+  { label: "Total Spends on Customer Acquisition", type: "auto", addGapAfter: true },
 
-  { name: "Website Visitors", type: "calculated" },
-  { name: "Sign-Ups / Leads", type: "calculated" },
-  { name: "KYC Verified", type: "calculated" },
-  { name: "Activated Accounts", type: "calculated" },
-  { name: "Active Traders", type: "calculated" },
-  { name: "Paying Subscribers", type: "calculated" },
-  { name: "AUM Contributors", type: "input" },
+  { label: "Website Visitors", type: "auto" },
+  { label: "Sign-Ups / Leads", type: "auto" },
+  { label: "KYC Verified", type: "auto" },
+  { label: "Activated Accounts", type: "auto" },
+  { label: "Active Traders", type: "auto" },
+  { label: "Paying Subscribers", type: "auto" },
+  { label: "AUM Contributors", type: "input" },
 
-  { name: "Churn Rate", type: "input" },
-  { name: "Users Lost", type: "calculated", addGapAfter: true },
+  { label: "Churn Rate", type: "input" },
+  { label: "Users Lost", type: "auto", addGapAfter: true },
 
-  { name: "Total Net Users", type: "calculated" },
-  { name: "Cost of Customer Acquisition", type: "calculated" }
+  { label: "Total Net Users", type: "auto" },
+  { label: "Cost of Customer Acquisition", type: "auto" }
 ];
 
 const Growth: React.FC = () => {
@@ -40,38 +40,118 @@ const Growth: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const [sheetData, setSheetData] = useState<
+    Record<string, Record<string, { value: number; is_calculated: boolean }>>
+  >({});
+
+  const sheetType = "growth-funnel";
+
+  const getQuarterKey = (year: string, quarterIdx: number) =>
+    `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
+
+  const getDisplayedQuarters = () => {
+    if (viewMode === "quarter") {
+      return quarters.map((q, i) => ({
+        label: q,
+        key: getQuarterKey(selectedYear, i),
+      }));
+    } else {
+      return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, i) => ({
+        label: `Y${i + 1}`,
+        key: `Y${i + 1}Q4`,
+      }));
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const yearNum = selectedYear.replace("Year ", "");
+
+      try {
+        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const data = await response.json();
+        setSheetData(data);
+      } catch (error) {
+        console.error("Error fetching sheet data:", error);
+      }
+    };
+
+    fetchData();
+  }, [selectedYear]);
+
+  const handleInputChange = async (
+    fieldName: string,
+    quarterIdx: number,
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const newValue = parseFloat(event.target.value) || 0;
+    const yearNum = parseInt(selectedYear.replace("Year ", ""));
+    const quarterKey = getQuarterKey(selectedYear, quarterIdx);
+
+    setSheetData((prev) => ({
+      ...prev,
+      [fieldName]: {
+        ...prev[fieldName],
+        [quarterKey]: {
+          ...prev[fieldName]?.[quarterKey],
+          value: newValue,
+          is_calculated: false,
+        },
+      },
+    }));
+
+    try {
+      const response = await fetch("http://localhost:8000/api/update-cell", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company_id: 1,
+          sheet_type: sheetType,
+          field_name: fieldName,
+          year_num: yearNum,
+          quarter_num: quarterIdx + 1,
+          value: newValue,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.status === "success") {
+        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const updatedData = await updated.json();
+        setSheetData(updatedData);
+      } else {
+        console.error("Error updating cell:", result.message);
+      }
+    } catch (error) {
+      console.error("Update error:", error);
+    }
+  };
 
   return (
     <div className="revenue">
       <div className="chart-section mb-4 d-flex gap-3 flex-wrap">
         <div className="chart-card flex-fill">
           <h6 className="chart-title d-flex justify-content-between">
-            Growth Trend{" "}
-            <span className="info-icon">
-              <BsInfoCircleFill />
-            </span>
+            Growth Trend <span className="info-icon"><BsInfoCircleFill /></span>
           </h6>
           <div className="chart-placeholder">[ Line Chart Placeholder ]</div>
         </div>
 
         <div className="chart-card flex-fill">
           <h6 className="chart-title d-flex justify-content-between">
-            Avg Reach per Campaign{" "}
-            <span className="info-icon">
-              <BsInfoCircleFill />
-            </span>
+            Avg Reach per Campaign <span className="info-icon"><BsInfoCircleFill /></span>
           </h6>
           <div className="chart-placeholder">[ Bar + Line Chart Placeholder ]</div>
         </div>
@@ -81,46 +161,34 @@ const Growth: React.FC = () => {
         <div className="container mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
-              Growth Metrics{" "}
-              <span className="info-icon">
-                <BsInfoCircleFill />
-              </span>
+              Growth Metrics <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
               <div className="position-relative" ref={dropdownRef}>
                 <button
-                  className={`pill-toggle-btn ${
-                    viewMode === "quarter" ? "active" : ""
-                  }`}
+                  className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
                   onClick={() => {
                     setViewMode("quarter");
                     setShowDropdown((prev) => !prev);
                   }}
                 >
                   <span className="circle-indicator" />
-                  <span className="pill-label">Quarter Wise</span>
-                  <span className="dropdown-arrow">▾</span>
+                  <span className="pill-label">Quarter Wise</span>           
                 </button>
 
                 {showDropdown && (
                   <div className="custom-dropdown">
-                    {["Year 1", "Year 2", "Year 3"].map((year, idx) => (
+                    {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
                       <div
                         key={idx}
-                        className={`dropdown-item-pill ${
-                          selectedYear === year ? "selected" : ""
-                        }`}
+                        className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
                         onClick={() => {
                           setSelectedYear(year);
                           setShowDropdown(false);
                         }}
                       >
-                        <span
-                          className={`radio-circle ${
-                            selectedYear === year ? "filled" : ""
-                          }`}
-                        />
+                        <span className={`radio-circle ${selectedYear === year ? "filled" : ""}`} />
                         {year}
                       </div>
                     ))}
@@ -129,9 +197,7 @@ const Growth: React.FC = () => {
               </div>
 
               <button
-                className={`pill-toggle-btn ${
-                  viewMode === "year" ? "active" : ""
-                }`}
+                className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
                 onClick={() => {
                   setViewMode("year");
                   setShowDropdown(false);
@@ -151,41 +217,48 @@ const Growth: React.FC = () => {
             <thead>
               <tr>
                 <th className="metrics-header">Metrics</th>
-                {periods.map((p, i) => (
-                  <th key={i} className="quarter-header">
-                    {p}
-                  </th>
+                {getDisplayedQuarters().map((q, i) => (
+                  <th key={i} className="quarter-header">{q.label}</th>
                 ))}
               </tr>
             </thead>
+
             <tbody>
               {growthMetrics.map((metric, idx) => (
                 <React.Fragment key={idx}>
                   <tr className="align-middle">
                     <td>
-                      <div className="mb-1">{metric.name}</div>
+                      <div className="mb-1">{metric.label}</div>
                       <div className="text-muted" style={{ fontSize: "12px" }}>
                         {metric.type === "input" ? "Input" : "Auto"}
                       </div>
                     </td>
-                    {periods.map((_, pIdx) => (
-                      <td key={pIdx}>
-                        {metric.type === "input" ? (
-                          <input
-                            type="text"
-                            defaultValue="0"
-                            className="form-control form-control-sm"
-                          />
-                        ) : (
-                          <span>0</span>
-                        )}
-                      </td>
-                    ))}
+
+                    {getDisplayedQuarters().map((q, qIdx) => {
+                      const metricData = sheetData?.[metric.label]?.[q.key];
+                      const value = metricData?.value ?? 0;
+                      const isCalculated = metricData?.is_calculated ?? false;
+
+                      return (
+                        <td key={qIdx}>
+                          {metric.type === "input" && !isCalculated && viewMode === "quarter" ? (
+                            <input
+                              type="number"
+                              className="form-control form-control-sm"
+                              value={value}
+                              onChange={(e) => handleInputChange(metric.label, qIdx, e)}
+                            />
+                          ) : (
+                            <span>{value.toLocaleString("en-IN")}</span>
+                          )}
+                        </td>
+                      );
+                    })}
                   </tr>
 
                   {metric.addGapAfter && (
                     <tr className="gap-row">
-                      <td colSpan={periods.length + 1}></td>
+                      <td colSpan={quarters.length + 1}></td>
                     </tr>
                   )}
                 </React.Fragment>

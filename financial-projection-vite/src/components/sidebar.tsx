@@ -11,6 +11,7 @@ import { HiOutlineUserGroup } from 'react-icons/hi';
 import { AiOutlineBank, AiOutlineMergeCells } from 'react-icons/ai';
 import { RiBugLine } from 'react-icons/ri';
 import { PiGraphLight } from 'react-icons/pi';
+import { GrMoney } from 'react-icons/gr';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -45,6 +46,7 @@ const menu = [
     section: 'Strategy',
     items: [
       { label: 'GTM Mergers', path: '/gtm-mergers', icon: <AiOutlineMergeCells /> },
+      { label: 'Financials', path: '/financial', icon: <GrMoney /> },
       { label: 'Valuation', path: '/valuation', icon: <LuWallet /> },
       { label: 'Stress Testing', path: '/stress-testing', icon: <RiBugLine /> },
       { label: 'Scenario Analysis', path: '/scenario-analysis', icon: <PiGraphLight /> },
