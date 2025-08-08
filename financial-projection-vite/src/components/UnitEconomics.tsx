@@ -26,7 +26,7 @@ const UnitEconomics: React.FC = () => {
     Record<string, Record<string, { value: number; is_calculated: boolean }>>
   >({});
 
-  const sheetType = "unit_economics";
+  const sheetType = "unit-economics";
 
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
@@ -132,8 +132,7 @@ const UnitEconomics: React.FC = () => {
       console.error("Update error:", error);
     }
   };
-  console.log("Metric Labels in metricItems:", metricItems.map(m => m.label));
-console.log("Keys in sheetData:", Object.keys(sheetData));
+  
 
 
   return (
