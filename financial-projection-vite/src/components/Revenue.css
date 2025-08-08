@@ -219,6 +219,7 @@ table.table-hover tbody tr:hover td {
 
 .revenue{
     background-color: #fef2e8;
+     min-height: 100vh;
 }
 .chart-section {
   display: flex;

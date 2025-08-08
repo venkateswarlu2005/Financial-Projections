@@ -1,29 +1,51 @@
 import React, { useState, useRef, useEffect } from "react";
-import "./Revenue.css"; // Reuse Revenue styles
+import "./Revenue.css"; // reuse styling from Revenue
 import { BsInfoCircleFill } from "react-icons/bs";
 
-const periods = ["Q1", "Q2", "Q3", "Q4"];
+const quarters = ["Q1", "Q2", "Q3", "Q4"];
+const yearsList = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 
-const growthMetrics = [
-  { "name": "Fixed Deposits", "type": "cumulative" },
-  { "name": "Properties", "type": "cumulative" },
-  { "name": "Equipments", "type": "cumulative" },
-  { "name": "Vehicles", "type": "cumulative" },
-  { "name": "NSE Data Processing Units", "type": "cumulative",addGapAfter: true },
-  { "name": "Total Assets Value", "type": "calculated" }
+const valuationMetrics = [
+  { label: "Revenue Multiple", type: "input" },
+  { label: "EBITDA Multiple", type: "input" },
+  { label: "Customer Multiple (₹)", type: "input", addGapAfter: true },
+  { label: "Revenue-based Valuation", type: "auto" },
+  { label: "EBITDA-based Valuation", type: "auto" },
+  { label: "Customer-based Valuation", type: "auto" }
 ];
+
 const Valuation: React.FC = () => {
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const [sheetData, setSheetData] = useState<
+    Record<string, Record<string, { value: number; is_calculated: boolean }>>
+  >({});
+
+  const sheetType = "valuation";
+
+  const getQuarterKey = (year: string, quarterIdx: number) =>
+    `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
+
+  const getDisplayedPeriods = () => {
+    if (viewMode === "quarter") {
+      return quarters.map((q, i) => ({
+        label: q,
+        key: getQuarterKey(selectedYear, i),
+      }));
+    }
+    return yearsList.map((year, i) => ({
+      label: `Y${i + 1}`,
+      key: `Y${i + 1}Q4`,
+    }));
+  };
+
+  // Close dropdown on outside click
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
       }
     };
@@ -31,74 +53,104 @@ const Valuation: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch data when selected year changes
+  useEffect(() => {
+    const fetchData = async () => {
+      const yearNum = selectedYear.replace("Year ", "");
+      try {
+        const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const data = await res.json();
+        setSheetData(data);
+      } catch (err) {
+        console.error("Error fetching valuation data:", err);
+      }
+    };
+    fetchData();
+  }, [selectedYear]);
+
+  const handleInputChange = async (
+    fieldName: string,
+    quarterIdx: number,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const newValue = parseFloat(e.target.value) || 0;
+    const yearNum = parseInt(selectedYear.replace("Year ", ""));
+    const quarterKey = getQuarterKey(selectedYear, quarterIdx);
+
+    setSheetData(prev => ({
+      ...prev,
+      [fieldName]: {
+        ...prev[fieldName],
+        [quarterKey]: {
+          ...prev[fieldName]?.[quarterKey],
+          value: newValue,
+          is_calculated: false,
+        },
+      },
+    }));
+
+    try {
+      const res = await fetch("http://localhost:8000/api/update-cell", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company_id: 1,
+          sheet_type: sheetType,
+          field_name: fieldName,
+          year_num: yearNum,
+          quarter_num: quarterIdx + 1,
+          value: newValue,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (res.ok && result.status === "success") {
+        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const updatedData = await updated.json();
+        setSheetData(updatedData);
+      } else {
+        console.error("Error updating valuation cell:", result.message);
+      }
+    } catch (err) {
+      console.error("Update error:", err);
+    }
+  };
+
   return (
     <div className="revenue">
-      <div className="chart-section mb-4 d-flex gap-3 flex-wrap">
-        <div className="chart-card flex-fill">
-          <h6 className="chart-title d-flex justify-content-between">
-            Growth Trend{" "}
-            <span className="info-icon">
-              <BsInfoCircleFill />
-            </span>
-          </h6>
-          <div className="chart-placeholder">[ Line Chart Placeholder ]</div>
-        </div>
-
-        <div className="chart-card flex-fill">
-          <h6 className="chart-title d-flex justify-content-between">
-            Avg Reach per Campaign{" "}
-            <span className="info-icon">
-              <BsInfoCircleFill />
-            </span>
-          </h6>
-          <div className="chart-placeholder">[ Bar + Line Chart Placeholder ]</div>
-        </div>
-      </div>
-
       <div className="table-wrapper">
         <div className="container mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
-              Growth Metrics{" "}
-              <span className="info-icon">
-                <BsInfoCircleFill />
-              </span>
+              Valuation Metrics <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
               <div className="position-relative" ref={dropdownRef}>
                 <button
-                  className={`pill-toggle-btn ${
-                    viewMode === "quarter" ? "active" : ""
-                  }`}
+                  className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
                   onClick={() => {
                     setViewMode("quarter");
-                    setShowDropdown((prev) => !prev);
+                    setShowDropdown(prev => !prev);
                   }}
                 >
                   <span className="circle-indicator" />
                   <span className="pill-label">Quarter Wise</span>
-                  <span className="dropdown-arrow">▾</span>
                 </button>
 
                 {showDropdown && (
                   <div className="custom-dropdown">
-                    {["Year 1", "Year 2", "Year 3"].map((year, idx) => (
+                    {yearsList.map((year, idx) => (
                       <div
                         key={idx}
-                        className={`dropdown-item-pill ${
-                          selectedYear === year ? "selected" : ""
-                        }`}
+                        className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
                         onClick={() => {
                           setSelectedYear(year);
                           setShowDropdown(false);
                         }}
                       >
-                        <span
-                          className={`radio-circle ${
-                            selectedYear === year ? "filled" : ""
-                          }`}
-                        />
+                        <span className={`radio-circle ${selectedYear === year ? "filled" : ""}`} />
                         {year}
                       </div>
                     ))}
@@ -107,9 +159,7 @@ const Valuation: React.FC = () => {
               </div>
 
               <button
-                className={`pill-toggle-btn ${
-                  viewMode === "year" ? "active" : ""
-                }`}
+                className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
                 onClick={() => {
                   setViewMode("year");
                   setShowDropdown(false);
@@ -129,41 +179,47 @@ const Valuation: React.FC = () => {
             <thead>
               <tr>
                 <th className="metrics-header">Metrics</th>
-                {periods.map((p, i) => (
-                  <th key={i} className="quarter-header">
-                    {p}
-                  </th>
+                {getDisplayedPeriods().map((p, i) => (
+                  <th key={i} className="quarter-header">{p.label}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {growthMetrics.map((metric, idx) => (
+              {valuationMetrics.map((metric, idx) => (
                 <React.Fragment key={idx}>
                   <tr className="align-middle">
                     <td>
-                      <div className="mb-1">{metric.name}</div>
+                      <div className="mb-1">{metric.label}</div>
                       <div className="text-muted" style={{ fontSize: "12px" }}>
                         {metric.type === "input" ? "Input" : "Auto"}
                       </div>
                     </td>
-                    {periods.map((_, pIdx) => (
-                      <td key={pIdx}>
-                        {metric.type === "input" ? (
-                          <input
-                            type="text"
-                            defaultValue="0"
-                            className="form-control form-control-sm"
-                          />
-                        ) : (
-                          <span>0</span>
-                        )}
-                      </td>
-                    ))}
+
+                    {getDisplayedPeriods().map((p, qIdx) => {
+                      const metricData = sheetData?.[metric.label]?.[p.key];
+                      const value = metricData?.value ?? 0;
+                      const isCalculated = metricData?.is_calculated ?? false;
+
+                      return (
+                        <td key={qIdx}>
+                          {metric.type === "input" && !isCalculated && viewMode === "quarter" ? (
+                            <input
+                              type="number"
+                              className="form-control form-control-sm"
+                              value={value}
+                              onChange={(e) => handleInputChange(metric.label, qIdx, e)}
+                            />
+                          ) : (
+                            <span>{value.toLocaleString("en-IN")}</span>
+                          )}
+                        </td>
+                      );
+                    })}
                   </tr>
 
                   {metric.addGapAfter && (
                     <tr className="gap-row">
-                      <td colSpan={periods.length + 1}></td>
+                      <td colSpan={quarters.length + 1}></td>
                     </tr>
                   )}
                 </React.Fragment>
@@ -177,4 +233,3 @@ const Valuation: React.FC = () => {
 };
 
 export default Valuation;
-

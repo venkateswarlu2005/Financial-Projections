@@ -192,27 +192,13 @@ const Salaries: React.FC = () => {
 
   return (
     <div className="revenue">
-      <div className="chart-section mb-4 d-flex gap-3 flex-wrap">
-        <div className="chart-card flex-fill">
-          <h6 className="chart-title d-flex justify-content-between">
-            Salary Growth Trend <span className="info-icon"><BsInfoCircleFill /></span>
-          </h6>
-          <div className="chart-placeholder">[ Line Chart Placeholder ]</div>
-        </div>
-
-        <div className="chart-card flex-fill">
-          <h6 className="chart-title d-flex justify-content-between">
-            Avg Salary per Employee <span className="info-icon"><BsInfoCircleFill /></span>
-          </h6>
-          <div className="chart-placeholder">[ Bar + Line Chart Placeholder ]</div>
-        </div>
-      </div>
+      
 
       <div className="table-wrapper">
         <div className="container mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
-              Salaries <span className="info-icon"><BsInfoCircleFill /></span>
+              Salary Metrics <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">

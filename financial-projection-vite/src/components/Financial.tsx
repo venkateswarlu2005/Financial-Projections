@@ -7,13 +7,14 @@ const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const capexMetrics = [
   { label: "Total Revenue", type: "auto" },
   { label: "Total Salary Cost", type: "auto" },
-  { label: "Total tech & OpEx", type: "auto"},
+  { label: "Total Tech & OpEx", type: "auto"},
   { label: "Total Customer Acquisition Spends", type: "auto" },
   { label: "M&A Costs", type: "auto" },
   { label: "Total Operating Costs", type: "auto" , addGapAfter: true },
-    { label: "EBIDTA", type: "auto" },
-      { label: "EBIDTA(%)", type: "auto" }
+  { label: "EBITDA", type: "auto" },
+  { label: "EBITDA Margin (%)", type: "auto" }
 ];
+
 
 const Financial: React.FC = () => {
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
@@ -119,21 +120,7 @@ const Financial: React.FC = () => {
 
   return (
     <div className="revenue">
-      <div className="chart-section mb-4 d-flex gap-3 flex-wrap">
-        <div className="chart-card flex-fill">
-          <h6 className="chart-title d-flex justify-content-between">
-            Financial Trend <span className="info-icon"><BsInfoCircleFill /></span>
-          </h6>
-          <div className="chart-placeholder">[ Line Chart Placeholder ]</div>
-        </div>
 
-        <div className="chart-card flex-fill">
-          <h6 className="chart-title d-flex justify-content-between">
-            Valuation Metrics <span className="info-icon"><BsInfoCircleFill /></span>
-          </h6>
-          <div className="chart-placeholder">[ Bar + Line Chart Placeholder ]</div>
-        </div>
-      </div>
 
       <div className="table-wrapper">
         <div className="container mt-4">

@@ -1,16 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
-import "./Revenue.css"; // Reuse Revenue styles
+import "./Revenue.css"; // Reuse styles
 import { BsInfoCircleFill } from "react-icons/bs";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
-const capexMetrics = [
-  { label: "Revenue Multiple", type: "input" },
-  { label: "EBITDA Multiple", type: "input" },
-  { label: "Customer Multiple (₹)", type: "input", addGapAfter: true },
-  { label: "Revenue-based Valuation", type: "auto" },
-  { label: "EBITDA-based Valuation", type: "auto" },
-  { label: "Customer-based Valuation", type: "auto" }
+const growthMetrics = [
+  { name: "Fixed Deposits", type: "cumulative" },
+  { name: "Properties", type: "cumulative" },
+  { name: "Equipments", type: "cumulative" },
+  { name: "Vehicles", type: "cumulative" },
+  { name: "NSE Data Processing Units", type: "cumulative", addGapAfter: true },
+  { name: "Total Assets Value", type: "calculated" }
 ];
 
 const CapEx: React.FC = () => {
@@ -48,6 +48,7 @@ const CapEx: React.FC = () => {
         setShowDropdown(false);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -55,6 +56,7 @@ const CapEx: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       const yearNum = selectedYear.replace("Year ", "");
+
       try {
         const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
         const data = await response.json();
@@ -63,6 +65,7 @@ const CapEx: React.FC = () => {
         console.error("Error fetching sheet data:", error);
       }
     };
+
     fetchData();
   }, [selectedYear]);
 
@@ -117,27 +120,12 @@ const CapEx: React.FC = () => {
 
   return (
     <div className="revenue">
-      <div className="chart-section mb-4 d-flex gap-3 flex-wrap">
-        <div className="chart-card flex-fill">
-          <h6 className="chart-title d-flex justify-content-between">
-            CapEx Trend <span className="info-icon"><BsInfoCircleFill /></span>
-          </h6>
-          <div className="chart-placeholder">[ Line Chart Placeholder ]</div>
-        </div>
-
-        <div className="chart-card flex-fill">
-          <h6 className="chart-title d-flex justify-content-between">
-            Valuation Metrics <span className="info-icon"><BsInfoCircleFill /></span>
-          </h6>
-          <div className="chart-placeholder">[ Bar + Line Chart Placeholder ]</div>
-        </div>
-      </div>
-
       <div className="table-wrapper">
         <div className="container mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
-              CapEx Metrics <span className="info-icon"><BsInfoCircleFill /></span>
+              CapEx Metrics{" "}
+              <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
@@ -151,7 +139,6 @@ const CapEx: React.FC = () => {
                 >
                   <span className="circle-indicator" />
                   <span className="pill-label">Quarter Wise</span>
-                  
                 </button>
 
                 {showDropdown && (
@@ -201,29 +188,29 @@ const CapEx: React.FC = () => {
             </thead>
 
             <tbody>
-              {capexMetrics.map((metric, idx) => (
+              {growthMetrics.map((metric, idx) => (
                 <React.Fragment key={idx}>
                   <tr className="align-middle">
                     <td>
-                      <div className="mb-1">{metric.label}</div>
+                      <div className="mb-1">{metric.name}</div>
                       <div className="text-muted" style={{ fontSize: "12px" }}>
-                        {metric.type === "input" ? "Input" : "Auto"}
+                        {metric.type === "cumulative" ? "Input" : "Auto"}
                       </div>
                     </td>
 
                     {getDisplayedQuarters().map((q, qIdx) => {
-                      const metricData = sheetData?.[metric.label]?.[q.key];
+                      const metricData = sheetData?.[metric.name]?.[q.key];
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
 
                       return (
                         <td key={qIdx}>
-                          {metric.type === "input" && !isCalculated && viewMode === "quarter" ? (
+                          {metric.type === "cumulative" && !isCalculated && viewMode === "quarter" ? (
                             <input
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              onChange={(e) => handleInputChange(metric.label, qIdx, e)}
+                              onChange={(e) => handleInputChange(metric.name, qIdx, e)}
                             />
                           ) : (
                             <span>{value.toLocaleString("en-IN")}</span>

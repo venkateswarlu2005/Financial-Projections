@@ -141,21 +141,7 @@ const Growth: React.FC = () => {
 
   return (
     <div className="revenue">
-      <div className="chart-section mb-4 d-flex gap-3 flex-wrap">
-        <div className="chart-card flex-fill">
-          <h6 className="chart-title d-flex justify-content-between">
-            Growth Trend <span className="info-icon"><BsInfoCircleFill /></span>
-          </h6>
-          <div className="chart-placeholder">[ Line Chart Placeholder ]</div>
-        </div>
 
-        <div className="chart-card flex-fill">
-          <h6 className="chart-title d-flex justify-content-between">
-            Avg Reach per Campaign <span className="info-icon"><BsInfoCircleFill /></span>
-          </h6>
-          <div className="chart-placeholder">[ Bar + Line Chart Placeholder ]</div>
-        </div>
-      </div>
 
       <div className="table-wrapper">
         <div className="container mt-4">
