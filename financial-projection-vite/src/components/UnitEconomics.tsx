@@ -21,6 +21,7 @@ const UnitEconomics: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Now this will store all years' data at once
   const [sheetData, setSheetData] = useState<
     Record<string, Record<string, { value: number; is_calculated: boolean }>>
   >({});
@@ -39,37 +40,41 @@ const UnitEconomics: React.FC = () => {
     } else {
       return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, i) => ({
         label: `Y${i + 1}`,
-        key: `Y${i + 1}Q4`,
+        key: `Y${i + 1}Q4`, // Use Q4 as yearly total
       }));
     }
   };
 
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch ALL years on mount
   useEffect(() => {
-    const fetchData = async () => {
-      const yearNum = selectedYear.replace("Year ", "");
-
+    const fetchAllYears = async () => {
+      let combined: Record<string, any> = {};
       try {
-        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const data = await response.json();
-        setSheetData(data);
+        for (let y = 1; y <= 5; y++) {
+          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${y}`);
+          const data = await res.json();
+          for (const metric in data) {
+            combined[metric] = { ...(combined[metric] || {}), ...data[metric] };
+          }
+        }
+        setSheetData(combined);
       } catch (error) {
         console.error("Error fetching sheet data:", error);
       }
     };
-
-    fetchData();
-  }, [selectedYear]);
+    fetchAllYears();
+  }, []);
 
   const handleInputChange = async (
     fieldName: string,
@@ -109,9 +114,17 @@ const UnitEconomics: React.FC = () => {
       const result = await response.json();
 
       if (response.ok && result.status === "success") {
-        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const updatedData = await updated.json();
-        setSheetData(updatedData);
+        // Re-fetch this year's data & merge into state
+        const updatedRes = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const updatedData = await updatedRes.json();
+
+        setSheetData((prev) => {
+          const newData = { ...prev };
+          for (const metric in updatedData) {
+            newData[metric] = { ...(newData[metric] || {}), ...updatedData[metric] };
+          }
+          return newData;
+        });
       } else {
         console.error("Error updating cell:", result.message);
       }
