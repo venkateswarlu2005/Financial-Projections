@@ -65,7 +65,7 @@ const Revenue: React.FC = () => {
         key: getQuarterKey(selectedYear, i),
       }));
     } else {
-      return ["Year 1", "Year 2", "Year 3"].map((year, i) => ({
+      return ["Year 1", "Year 2", "Year 3","year 4","year5"].map((year, i) => ({
         label: `Y${i + 1}`,
         key: `Y${i + 1}Q4`,
       }));
@@ -190,7 +190,7 @@ const Revenue: React.FC = () => {
 
                 {showDropdown && (
                   <div className="custom-dropdown">
-                    {["Year 1", "Year 2", "Year 3"].map((year, idx) => (
+                    {["Year 1", "Year 2", "Year 3","year4","year5"].map((year, idx) => (
                       <div
                         key={idx}
                         className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
