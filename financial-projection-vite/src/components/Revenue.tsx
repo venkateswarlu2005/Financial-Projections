@@ -85,40 +85,56 @@ const Revenue: React.FC = () => {
   }, [selectedYear]);
 
   const handleInputChange = async (
-    fieldName: string,
-    quarterIdx: number,
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const newValue = parseFloat(event.target.value) || 0;
-    const yearNum = parseInt(selectedYear.replace("Year ", ""));
+  fieldName: string,
+  quarterIdx: number,
+  event: React.ChangeEvent<HTMLInputElement>
+) => {
+  const newValue = parseFloat(event.target.value) || 0;
+  const yearNum = parseInt(selectedYear.replace("Year ", ""));
+  const quarterKey = getQuarterKey(selectedYear, quarterIdx);
 
-    try {
-      const response = await fetch("http://localhost:8000/api/update-cell", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          company_id: 1,
-          sheet_type: sheetType,
-          field_name: fieldName,
-          year_num: yearNum,
-          quarter_num: quarterIdx + 1,
-          value: newValue,
-        }),
-      });
+  // Optimistically update the UI
+  setSheetData((prev) => ({
+    ...prev,
+    [fieldName]: {
+      ...prev[fieldName],
+      [quarterKey]: {
+        ...prev[fieldName]?.[quarterKey],
+        value: newValue,
+        is_calculated: false,
+      },
+    },
+  }));
 
-      const result = await response.json();
+  try {
+    const response = await fetch("http://localhost:8000/api/update-cell", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        company_id: 1,
+        sheet_type: sheetType,
+        field_name: fieldName,
+        year_num: yearNum,
+        quarter_num: quarterIdx + 1,
+        value: newValue,
+      }),
+    });
 
-      if (response.ok && result.status === "success") {
-        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const updatedData = await updated.json();
-        setSheetData(updatedData);
-      } else {
-        console.error("Error updating cell:", result.message);
-      }
-    } catch (error) {
-      console.error("Update error:", error);
+    const result = await response.json();
+
+    if (response.ok && result.status === "success") {
+      // Refresh the sheet data to get any recalculated fields
+      const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+      const updatedData = await updated.json();
+      setSheetData(updatedData);
+    } else {
+      console.error("Error updating cell:", result.message);
     }
-  };
+  } catch (error) {
+    console.error("Update error:", error);
+  }
+};
+
 
   return (
     <div className="revenue">
