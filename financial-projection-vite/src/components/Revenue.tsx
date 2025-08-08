@@ -73,7 +73,7 @@ const Revenue: React.FC = () => {
     const fetchData = async () => {
       const yearNum = selectedYear.replace("Year ", "");
       try {
-        const response = await fetch(`/api/sheet-data/${sheetType}/${yearNum}`);
+        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
         const data = await response.json();
         setSheetData(data);
       } catch (error) {
@@ -93,7 +93,7 @@ const Revenue: React.FC = () => {
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
 
     try {
-      const response = await fetch("/api/update-cell", {
+      const response = await fetch("http://localhost:8000/api/update-cell", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -109,7 +109,7 @@ const Revenue: React.FC = () => {
       const result = await response.json();
 
       if (response.ok && result.status === "success") {
-        const updated = await fetch(`/api/sheet-data/${sheetType}/${yearNum}`);
+        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
         const updatedData = await updated.json();
         setSheetData(updatedData);
       } else {
