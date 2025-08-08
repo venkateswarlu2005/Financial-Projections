@@ -110,14 +110,14 @@ const UnitEconomics: React.FC = () => {
           value: newValue,
         }),
       });
-
+        
       const result = await response.json();
 
       if (response.ok && result.status === "success") {
         // Re-fetch this year's data & merge into state
         const updatedRes = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
         const updatedData = await updatedRes.json();
-
+        
         setSheetData((prev) => {
           const newData = { ...prev };
           for (const metric in updatedData) {
@@ -132,6 +132,9 @@ const UnitEconomics: React.FC = () => {
       console.error("Update error:", error);
     }
   };
+  console.log("Metric Labels in metricItems:", metricItems.map(m => m.label));
+console.log("Keys in sheetData:", Object.keys(sheetData));
+
 
   return (
     <div className="revenue">
