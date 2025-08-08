@@ -6,22 +6,39 @@ const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 
 const techOpex = [
-  { name: "Cloud Hosting", type: "input" },
-  { name: "CDN Services", type: "input" },
-  { name: "Database Hosting", type: "input" },
-  { name: "DevOps Tools", type: "input" },
-  { name: "Version Control (GitHub/GitLab)", type: "input" },
-  { name: "Monitoring & Logging Tools", type: "input" },
-  { name: "AI/ML Model Hosting", type: "input", afterGap: true },
+  // Technology Costs
+  { name: "Cyber Security", type: "input" },
+  { name: "Servers", type: "input" },
+  { name: "Data Processing Equipment - NSE", type: "input" },
+  { name: "GPUs", type: "input" },
+  { name: "Lease Line", type: "input" },
+  { name: "Third Party APIs", type: "input" },
+  { name: "Third Party SAAS", type: "input" },
+  { name: "Google Workspace", type: "input", afterGap: true },
 
-  { name: "Cybersecurity Software", type: "input" },
-  { name: "Data Backup & Recovery", type: "input" },
-  { name: "Disaster Recovery Services", type: "input", afterGap: true },
+  // Regulatory & Compliance
+  { name: "AMCs", type: "input" },
+  { name: "SEBI Compliance", type: "input" },
+  { name: "NSE", type: "input" },
+  { name: "BSE", type: "input" },
+  { name: "DP", type: "input" },
+  { name: "AMFI", type: "input" },
+  { name: "RBI", type: "input" },
+  { name: "ROC", type: "input" },
+  { name: "IT", type: "input", afterGap: true },
 
+  // Other OpEx
+  { name: "Office Rent", type: "input" },
+  { name: "Utilities & Internet", type: "input" },
+  { name: "Office Supplies", type: "input" },
+  { name: "Travel", type: "input", afterGap: true },
+
+  // Auto-calculated
   { name: "Inflation Adjustment (%)", type: "calculated" },
   { name: "Surprise Costs", type: "calculated" },
-  { name: "Total", type: "calculated" },
+  { name: "Total", type: "calculated" }
 ];
+
 
 const OpEx: React.FC = () => {
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
