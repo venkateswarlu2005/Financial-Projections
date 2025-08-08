@@ -44,6 +44,8 @@ const Growth: React.FC = () => {
     Record<string, Record<string, { value: number; is_calculated: boolean }>>
   >({});
 
+  const [loadingAI, setLoadingAI] = useState(false);
+
   const sheetType = "growth-funnel";
 
   const getQuarterKey = (year: string, quarterIdx: number) =>
@@ -74,20 +76,19 @@ const Growth: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const fetchSheetData = async () => {
+    const yearNum = selectedYear.replace("Year ", "");
+    try {
+      const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+      const data = await response.json();
+      setSheetData(data);
+    } catch (error) {
+      console.error("Error fetching sheet data:", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      const yearNum = selectedYear.replace("Year ", "");
-
-      try {
-        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const data = await response.json();
-        setSheetData(data);
-      } catch (error) {
-        console.error("Error fetching sheet data:", error);
-      }
-    };
-
-    fetchData();
+    fetchSheetData();
   }, [selectedYear]);
 
   const handleInputChange = async (
@@ -128,9 +129,7 @@ const Growth: React.FC = () => {
       const result = await response.json();
 
       if (response.ok && result.status === "success") {
-        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const updatedData = await updated.json();
-        setSheetData(updatedData);
+        await fetchSheetData();
       } else {
         console.error("Error updating cell:", result.message);
       }
@@ -139,10 +138,36 @@ const Growth: React.FC = () => {
     }
   };
 
+  const getAIReachSuggestions = async () => {
+    const yearNum = selectedYear.replace("Year ", "");
+    setLoadingAI(true);
+    try {
+      const response = await fetch("http://localhost:8000/api/auto-populate-reach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company_id: 1,
+          year: yearNum,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status === "success") {
+        console.log("AI suggestions applied successfully");
+        await fetchSheetData();
+      } else {
+        console.error("AI suggestion failed:", data.message);
+      }
+    } catch (error) {
+      console.error("Error getting AI reach suggestions:", error);
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
   return (
     <div className="revenue">
-
-
       <div className="table-wrapper">
         <div className="container mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
@@ -191,6 +216,17 @@ const Growth: React.FC = () => {
               >
                 <span className="circle-indicator" />
                 <span className="pill-label">Year Wise</span>
+              </button>
+
+              {/* AI Suggestions Button */}
+              <button
+                className="pill-toggle-btn no-dot"
+                onClick={getAIReachSuggestions}
+                disabled={loadingAI}
+              >
+                <span className="pill-label">
+                  {loadingAI ? "Applying AI..." : "AI Suggestions"}
+                </span>
               </button>
 
               <button className="pill-toggle-btn no-dot">
