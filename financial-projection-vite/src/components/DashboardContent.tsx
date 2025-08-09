@@ -153,7 +153,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Charts */}
+      {/* Charts in 2×2 grid */}
       <div className="charts-grid">
         <ChartCard
           title="Revenue Trend"
