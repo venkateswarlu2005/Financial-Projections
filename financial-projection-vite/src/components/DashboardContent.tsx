@@ -78,14 +78,17 @@ export default function Dashboard() {
 
   // ===== Chart Data =====
   const revenueChartData = {
-    labels: data.revenue.map((d) => d.quarter),
+    labels: data.revenue.map((d) => d.quarter), // ["Y1Q1", "Y1Q2", ...]
     datasets: [
       {
-        label: "Revenue",
+        label: "Revenue (₹)",
         data: data.revenue.map((d) => d.value),
         borderColor: "#ff5e62",
         backgroundColor: "rgba(255, 94, 98, 0.2)",
-        fill: true
+        fill: true,
+        tension: 0.3,
+        pointRadius: 5,
+        pointBackgroundColor: "#ff5e62"
       }
     ]
   };
@@ -157,18 +160,30 @@ export default function Dashboard() {
       <div className="charts-grid">
         <ChartCard
           title="Revenue Trend"
-          value="$420,110"
-          subText="+12% vs last years"
+          value={`₹${formatNumber(data.summary.current_revenue)}`}
+          subText="+12% vs last year"
         >
           <Line
             data={revenueChartData}
-            options={{ responsive: true, maintainAspectRatio: false }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  ticks: {
+                    callback: function (value) {
+                      return `₹${Number(value).toLocaleString("en-IN")}`;
+                    }
+                  }
+                }
+              }
+            }}
           />
         </ChartCard>
 
         <ChartCard
           title="Unit Economics"
-          value="$420,110"
+          value="--"
           subText="+12% from last month"
         >
           <Doughnut
@@ -179,8 +194,10 @@ export default function Dashboard() {
 
         <ChartCard
           title="Customer Growth"
-          value="420,110"
-          subText="+12% vs last years"
+          value={formatNumber(
+            data.customers[data.customers.length - 1]?.value || 0
+          )}
+          subText="+12% vs last year"
         >
           <Bar
             data={growthChartData}
@@ -190,8 +207,8 @@ export default function Dashboard() {
 
         <ChartCard
           title="GTM Impact"
-          value="420,110"
-          subText="+12% vs last years"
+          value={`₹${formatNumber(data.summary.total_gtm_investment)}`}
+          subText="Latest GTM data"
         >
           <Bar
             data={gtmChartData}
