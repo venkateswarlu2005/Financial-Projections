@@ -4,14 +4,6 @@
 /* Global font */
 * {
   font-family: 'Poppins', sans-serif;
-  box-sizing: border-box;
-}
-
-/* Main container for consistent layout across screens */
-.main-container {
-  max-width: 1200px; /* fixed max width for consistent look */
-  margin: 0 auto; /* center horizontally */
-  padding: 20px;
 }
 
 /* Acquisition Card */
@@ -25,9 +17,6 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   border: 2px solid transparent;
   overflow: hidden;
-  flex: 1;
-  min-width: 280px; /* avoid too small */
-  max-width: 380px; /* avoid overly wide */
 }
 
 /* Card color variations */
@@ -79,8 +68,8 @@
 }
 
 .quarter-row label {
-  flex: 0 0 90px; /* fixed label size */
-  font-size: clamp(0.9rem, 1vw, 1rem);
+  flex: 0 0 100px;
+  font-size: 1rem;
   font-weight: 500;
 }
 
@@ -92,7 +81,7 @@
   background-color: #fff;
   width: 80px;
   outline: none;
-  font-size: clamp(0.9rem, 1vw, 1rem);
+  font-size: 1rem;
   color: #000;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -124,13 +113,13 @@
   box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
 }
 
-/* Year selector and dropdown */
+/* Pill button styles */
 .pill-toggle-btn {
   border: 1px solid #ccc;
   border-radius: 999px;
   background: #fff;
   padding: 6px 14px;
-  font-size: clamp(0.85rem, 1vw, 0.95rem);
+  font-size: 14px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -198,12 +187,28 @@
   font-size: 14px;
 }
 
-/* Responsive adjustments */
-@media (max-width: 992px) {
-  .row.g-3 {
-    flex-direction: column;
-  }
-  .col-md-4 {
-    width: 100%;
-  }
+/* Horizontal row for acquisition cards */
+.acq-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.acq-row::-webkit-scrollbar {
+  height: 6px;
+}
+
+.acq-row::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.acq-row::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.acq-card-wrapper {
+  flex: 0 0 320px;
 }

@@ -107,7 +107,6 @@ const GTM: React.FC = () => {
     newCount: number,
     newAmount: number
   ) => {
-    // Update state immediately
     setApiData((prev) => {
       const updated = { ...prev };
       const quarterKey = `Y${year_num}Q${quarter_num}`;
@@ -119,7 +118,6 @@ const GTM: React.FC = () => {
       return updated;
     });
 
-    // Send update to API
     fetch("http://localhost:8000/api/update-gtm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -185,9 +183,9 @@ const GTM: React.FC = () => {
           </div>
         </div>
 
-        {/* Acquisition Cards */}
-        <div className="row g-3">
-          <div className="col-md-4">
+        {/* Acquisition Cards in a row */}
+        <div className="acq-row">
+          <div className="acq-card-wrapper">
             <AcquisitionCard
               title="Acquire: Full Broking House"
               acquisitionKey="Full Broking House"
@@ -198,7 +196,7 @@ const GTM: React.FC = () => {
             />
           </div>
 
-          <div className="col-md-4">
+          <div className="acq-card-wrapper">
             <AcquisitionCard
               title="Acquire: GOP Based Broker Deals (Permanent)"
               acquisitionKey="GOP Based Broker Deals"
@@ -209,7 +207,7 @@ const GTM: React.FC = () => {
             />
           </div>
 
-          <div className="col-md-4">
+          <div className="acq-card-wrapper">
             <AcquisitionCard
               title="Acquire: Secondary Market Deals"
               acquisitionKey="Secondary Market Acquisitions"
