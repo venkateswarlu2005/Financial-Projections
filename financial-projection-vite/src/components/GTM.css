@@ -73,6 +73,7 @@
 }
 
 /* Default input style */
+/* Default input style */
 .quarter-row input {
   padding: 8px 10px;
   border-radius: 6px;
@@ -81,8 +82,10 @@
   width: 80px;
   outline: none;
   font-size: 1rem; /* bigger input text */
+  color: #000; /* <-- ensure text color is black */
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
+
 
 /* Larger width for amount */
 .amount-input {

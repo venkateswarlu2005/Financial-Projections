@@ -91,7 +91,7 @@ const GTM: React.FC = () => {
   // Fetch data
   useEffect(() => {
     const yearNum = parseInt(selectedYear.replace("Year ", ""), 10);
-    fetch(`/api/gtm-data/${yearNum}`)
+    fetch(`http://localhost:8000/api/gtm-data/${yearNum}`)
       .then((res) => res.json())
       .then((data: ApiData) => {
         setApiData(data);
@@ -99,54 +99,65 @@ const GTM: React.FC = () => {
       .catch((err) => console.error("Failed to fetch GTM data:", err));
   }, [selectedYear]);
 
-  // Click outside dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
+// Fetch data function (so we can reuse it)
+const fetchGtmData = (year: number) => {
+  fetch(`http://localhost:8000/api/gtm-data/${year}`)
+    .then((res) => res.json())
+    .then((data: ApiData) => {
+      setApiData(data);
+    })
+    .catch((err) => console.error("Failed to fetch GTM data:", err));
+};
+
+// useEffect for initial + year change
+useEffect(() => {
+  const yearNum = parseInt(selectedYear.replace("Year ", ""), 10);
+  fetchGtmData(yearNum);
+}, [selectedYear]);
+
+// Update API call + refetch
+const handleUpdate = (
+  acquisitionType: string,
+  year_num: number,
+  quarter_num: number,
+  field: "count" | "amount_per_acquisition",
+  value: number
+) => {
+  setApiData((prev) => {
+    const updated = { ...prev };
+    const quarterKey = `Y${year_num}Q${quarter_num}`;
+    if (!updated[acquisitionType]) return prev;
+    updated[acquisitionType][quarterKey] = {
+      ...updated[acquisitionType][quarterKey],
+      [field]: value,
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    return updated;
+  });
 
-  // Update API
-  const handleUpdate = (
-    acquisitionType: string,
-    year_num: number,
-    quarter_num: number,
-    field: "count" | "amount_per_acquisition",
-    value: number
-  ) => {
-    setApiData((prev) => {
-      const updated = { ...prev };
-      const quarterKey = `Y${year_num}Q${quarter_num}`;
-      if (!updated[acquisitionType]) return prev;
-      updated[acquisitionType][quarterKey] = {
-        ...updated[acquisitionType][quarterKey],
-        [field]: value,
-      };
-      return updated;
-    });
-
-    fetch("/api/update-gtm", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        acquisition_type: acquisitionType,
-        year_num,
-        quarter_num,
-        count:
-          field === "count"
-            ? value
-            : apiData[acquisitionType]?.[`Y${year_num}Q${quarter_num}`]?.count ?? 0,
-        amount_per_acquisition:
-          field === "amount_per_acquisition"
-            ? value
-            : apiData[acquisitionType]?.[`Y${year_num}Q${quarter_num}`]?.amount_per_acquisition ?? 0,
-      }),
-    }).catch((err) => console.error("Failed to update GTM data:", err));
-  };
+  fetch("http://localhost:8000/api/update-gtm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      acquisition_type: acquisitionType,
+      year_num,
+      quarter_num,
+      count:
+        field === "count"
+          ? value
+          : apiData[acquisitionType]?.[`Y${year_num}Q${quarter_num}`]?.count ?? 0,
+      amount_per_acquisition:
+        field === "amount_per_acquisition"
+          ? value
+          : apiData[acquisitionType]?.[`Y${year_num}Q${quarter_num}`]?.amount_per_acquisition ?? 0,
+    }),
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error("Failed to update GTM data");
+      // ✅ Refetch updated data
+      fetchGtmData(year_num);
+    })
+    .catch((err) => console.error("Failed to update GTM data:", err));
+};
 
   return (
     <div className="page-background">
