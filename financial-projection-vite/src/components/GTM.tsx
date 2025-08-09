@@ -23,8 +23,8 @@ interface AcquisitionCardProps {
     acquisitionType: string,
     year: number,
     quarter: number,
-    field: "count" | "amount_per_acquisition",
-    value: number
+    count: number,
+    amount_per_acquisition: number
   ) => void;
 }
 
@@ -43,39 +43,34 @@ const AcquisitionCard: React.FC<AcquisitionCardProps> = ({
     <div className={`acq-card ${borderClass}`}>
       <h6 className={headerClass}>{title}</h6>
       <div className="acq-content">
-        {quarters.map((q, index) => (
-          <div className="quarter-row" key={q}>
-            <label>Q{index + 1} Count:</label>
-            <input
-              type="number"
-              value={data[q]?.count ?? 0}
-              onChange={(e) =>
-                onUpdate(
-                  acquisitionKey,
-                  1, // Year number (fixed for now, can be dynamic)
-                  index + 1,
-                  "count",
-                  Number(e.target.value)
-                )
-              }
-            />
-            <label>Amount (₹):</label>
-            <input
-              type="number"
-              className="amount-input"
-              value={data[q]?.amount_per_acquisition ?? 0}
-              onChange={(e) =>
-                onUpdate(
-                  acquisitionKey,
-                  1,
-                  index + 1,
-                  "amount_per_acquisition",
-                  Number(e.target.value)
-                )
-              }
-            />
-          </div>
-        ))}
+        {quarters.map((q, index) => {
+          const countVal = data[q]?.count ?? 0;
+          const amountVal = data[q]?.amount_per_acquisition ?? 0;
+
+          return (
+            <div className="quarter-row" key={q}>
+              <label>Q{index + 1} Count:</label>
+              <input
+                type="number"
+                value={countVal}
+                onChange={(e) => {
+                  const newCount = Number(e.target.value);
+                  onUpdate(acquisitionKey, 1, index + 1, newCount, amountVal);
+                }}
+              />
+              <label>Amount (₹):</label>
+              <input
+                type="number"
+                className="amount-input"
+                value={amountVal}
+                onChange={(e) => {
+                  const newAmount = Number(e.target.value);
+                  onUpdate(acquisitionKey, 1, index + 1, countVal, newAmount);
+                }}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -88,76 +83,60 @@ const GTM: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch data
-  useEffect(() => {
-    const yearNum = parseInt(selectedYear.replace("Year ", ""), 10);
-    fetch(`http://localhost:8000/api/gtm-data/${yearNum}`)
+  // Fetch data function
+  const fetchGtmData = (year: number) => {
+    fetch(`http://localhost:8000/api/gtm-data/${year}`)
       .then((res) => res.json())
       .then((data: ApiData) => {
         setApiData(data);
       })
       .catch((err) => console.error("Failed to fetch GTM data:", err));
+  };
+
+  // Initial + on year change
+  useEffect(() => {
+    const yearNum = parseInt(selectedYear.replace("Year ", ""), 10);
+    fetchGtmData(yearNum);
   }, [selectedYear]);
 
-// Fetch data function (so we can reuse it)
-const fetchGtmData = (year: number) => {
-  fetch(`http://localhost:8000/api/gtm-data/${year}`)
-    .then((res) => res.json())
-    .then((data: ApiData) => {
-      setApiData(data);
+  // Update API call + refetch
+  const handleUpdate = (
+    acquisitionType: string,
+    year_num: number,
+    quarter_num: number,
+    newCount: number,
+    newAmount: number
+  ) => {
+    // Update state immediately
+    setApiData((prev) => {
+      const updated = { ...prev };
+      const quarterKey = `Y${year_num}Q${quarter_num}`;
+      if (!updated[acquisitionType]) return prev;
+      updated[acquisitionType][quarterKey] = {
+        count: newCount,
+        amount_per_acquisition: newAmount,
+      };
+      return updated;
+    });
+
+    // Send update to API
+    fetch("http://localhost:8000/api/update-gtm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        acquisition_type: acquisitionType,
+        year_num,
+        quarter_num,
+        count: newCount,
+        amount_per_acquisition: newAmount,
+      }),
     })
-    .catch((err) => console.error("Failed to fetch GTM data:", err));
-};
-
-// useEffect for initial + year change
-useEffect(() => {
-  const yearNum = parseInt(selectedYear.replace("Year ", ""), 10);
-  fetchGtmData(yearNum);
-}, [selectedYear]);
-
-// Update API call + refetch
-const handleUpdate = (
-  acquisitionType: string,
-  year_num: number,
-  quarter_num: number,
-  field: "count" | "amount_per_acquisition",
-  value: number
-) => {
-  setApiData((prev) => {
-    const updated = { ...prev };
-    const quarterKey = `Y${year_num}Q${quarter_num}`;
-    if (!updated[acquisitionType]) return prev;
-    updated[acquisitionType][quarterKey] = {
-      ...updated[acquisitionType][quarterKey],
-      [field]: value,
-    };
-    return updated;
-  });
-
-  fetch("http://localhost:8000/api/update-gtm", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      acquisition_type: acquisitionType,
-      year_num,
-      quarter_num,
-      count:
-        field === "count"
-          ? value
-          : apiData[acquisitionType]?.[`Y${year_num}Q${quarter_num}`]?.count ?? 0,
-      amount_per_acquisition:
-        field === "amount_per_acquisition"
-          ? value
-          : apiData[acquisitionType]?.[`Y${year_num}Q${quarter_num}`]?.amount_per_acquisition ?? 0,
-    }),
-  })
-    .then((res) => {
-      if (!res.ok) throw new Error("Failed to update GTM data");
-      // ✅ Refetch updated data
-      fetchGtmData(year_num);
-    })
-    .catch((err) => console.error("Failed to update GTM data:", err));
-};
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to update GTM data");
+        fetchGtmData(year_num);
+      })
+      .catch((err) => console.error("Failed to update GTM data:", err));
+  };
 
   return (
     <div className="page-background">
@@ -180,19 +159,27 @@ const handleUpdate = (
 
             {showDropdown && (
               <div className="custom-dropdown">
-                {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
-                  <div
-                    key={idx}
-                    className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
-                    onClick={() => {
-                      setSelectedYear(year);
-                      setShowDropdown(false);
-                    }}
-                  >
-                    <span className={`radio-circle ${selectedYear === year ? "filled" : ""}`} />
-                    {year}
-                  </div>
-                ))}
+                {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map(
+                  (year, idx) => (
+                    <div
+                      key={idx}
+                      className={`dropdown-item-pill ${
+                        selectedYear === year ? "selected" : ""
+                      }`}
+                      onClick={() => {
+                        setSelectedYear(year);
+                        setShowDropdown(false);
+                      }}
+                    >
+                      <span
+                        className={`radio-circle ${
+                          selectedYear === year ? "filled" : ""
+                        }`}
+                      />
+                      {year}
+                    </div>
+                  )
+                )}
               </div>
             )}
           </div>
