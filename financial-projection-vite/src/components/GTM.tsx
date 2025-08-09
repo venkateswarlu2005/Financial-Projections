@@ -1,50 +1,80 @@
 import React, { useState, useRef, useEffect } from "react";
-import "./Revenue.css"; // ✅ Reusing the same CSS
-import { BsInfoCircleFill } from "react-icons/bs";
+import "./GTM.css";
 
-const quarters = ["Q1", "Q2", "Q3", "Q4"];
+interface QuarterData {
+  count: number;
+  amount_per_acquisition: number;
+}
 
-const gtmMetricItems = [
-  { label: "Leads Generated", type: "input" },
-  { label: "Leads Converted", type: "input" },
-  { label: "Conversion Rate (%)", type: "auto", addGapAfter: true },
-  { label: "Average Deal Value (₹)", type: "input" },
-  { label: "Total Deals", type: "auto", addGapAfter: true },
-  { label: "Marketing Spend (₹)", type: "input" },
-  { label: "CAC (Customer Acquisition Cost)", type: "auto", addGapAfter: true },
-  { label: "Partnership Revenue (₹)", type: "input" },
-  { label: "Events & Sponsorships Revenue (₹)", type: "input" },
-  { label: "Total GTM Revenue", type: "auto" },
-];
+interface ApiData {
+  [key: string]: {
+    [quarter: string]: QuarterData;
+  };
+}
+
+interface AcquisitionCardProps {
+  title: string;
+  quarters: { count: number; amount: number }[];
+  borderClass: string;
+  headerClass: string;
+  onChange: (quarterIndex: number, field: "count" | "amount", value: number) => void;
+}
+
+const AcquisitionCard: React.FC<AcquisitionCardProps> = ({
+  title,
+  quarters,
+  borderClass,
+  headerClass,
+  onChange
+}) => {
+  return (
+    <div className={`acq-card ${borderClass}`}>
+      <h6 className={headerClass}>{title}</h6>
+      <div className="acq-content">
+        {quarters.map((q, index) => (
+          <div className="quarter-row" key={index}>
+            <label>Q{index + 1} Count:</label>
+            <input
+              type="number"
+              value={q.count}
+              onChange={(e) => onChange(index, "count", Number(e.target.value))}
+            />
+            <label>Amount (₹Cr):</label>
+            <input
+              type="number"
+              className="amount-input"
+              value={q.amount}
+              onChange={(e) => onChange(index, "amount", Number(e.target.value))}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const GTM: React.FC = () => {
-  const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [data, setData] = useState<ApiData>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const [sheetData, setSheetData] = useState<
-    Record<string, Record<string, { value: number; is_calculated: boolean }>>
-  >({});
+  const yearNum = Number(selectedYear.replace("Year ", ""));
 
-  const sheetType = "gtm";
-
-  const getQuarterKey = (year: string, quarterIdx: number) =>
-    `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
-
-  const getDisplayedQuarters = () => {
-    if (viewMode === "quarter") {
-      return quarters.map((q, i) => ({
-        label: q,
-        key: getQuarterKey(selectedYear, i),
-      }));
-    } else {
-      return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, i) => ({
-        label: `Y${i + 1}`,
-        key: `Y${i + 1}Q4`,
-      }));
+  // Fetch API data
+  const fetchData = async (year: string) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/gtm-data/${year}`);
+      const json: ApiData = await res.json();
+      setData(json);
+    } catch (err) {
+      console.error("Failed to fetch data", err);
     }
   };
+
+  useEffect(() => {
+    fetchData(`Y${yearNum}`);
+  }, [selectedYear]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -56,180 +86,139 @@ const GTM: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const yearNum = selectedYear.replace("Year ", "");
-      try {
-        const response = await fetch(`http://localhost:8000/api/gtm-data/${yearNum}`);
-        const data = await response.json();
-        setSheetData(data);
-      } catch (error) {
-        console.error("Error fetching GTM data:", error);
-      }
-    };
-    fetchData();
-  }, [selectedYear]);
-
-  const handleInputChange = async (
-    fieldName: string,
-    quarterIdx: number,
-    event: React.ChangeEvent<HTMLInputElement>
+  // Update API
+  const handleUpdate = async (
+    acquisitionType: string,
+    quarterIndex: number,
+    field: "count" | "amount",
+    value: number
   ) => {
-    const newValue = parseFloat(event.target.value) || 0;
-    const yearNum = parseInt(selectedYear.replace("Year ", ""));
-    const quarterKey = getQuarterKey(selectedYear, quarterIdx);
-
-    setSheetData((prev) => ({
-      ...prev,
-      [fieldName]: {
-        ...prev[fieldName],
-        [quarterKey]: {
-          ...prev[fieldName]?.[quarterKey],
-          value: newValue,
-          is_calculated: false,
-        },
-      },
-    }));
+    const quarterNum = quarterIndex + 1;
+    const updatedPayload = {
+      acquisition_type: acquisitionType,
+      year_num: yearNum,
+      quarter_num: quarterNum,
+      count:
+        field === "count"
+          ? value
+          : data[acquisitionType][`Y${yearNum}Q${quarterNum}`].count,
+      amount_per_acquisition:
+        field === "amount"
+          ? value * 10000000 // if amount entered is in ₹Cr, convert to raw value
+          : data[acquisitionType][`Y${yearNum}Q${quarterNum}`]
+              .amount_per_acquisition
+    };
 
     try {
-      const response = await fetch("http://localhost:8000/api/update-gtm", {
+      await fetch("http://localhost:8000/api/update-gtm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          company_id: 1,
-          sheet_type: sheetType,
-          field_name: fieldName,
-          year_num: yearNum,
-          quarter_num: quarterIdx + 1,
-          value: newValue,
-        }),
+        body: JSON.stringify(updatedPayload)
       });
-
-      const result = await response.json();
-
-      if (response.ok && result.status === "success") {
-        const updated = await fetch(`http://localhost:8000/api/gtm-data/${yearNum}`);
-        const updatedData = await updated.json();
-        setSheetData(updatedData);
-      } else {
-        console.error("Error updating GTM cell:", result.message);
-      }
-    } catch (error) {
-      console.error("Update error:", error);
+      // Refresh data after update
+      fetchData(`Y${yearNum}`);
+    } catch (err) {
+      console.error("Failed to update", err);
     }
   };
 
   return (
-    <div className="revenue">
-      <div className="table-wrapper">
-        <div className="container mt-4">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h5>
-              GTM Metrics & Performance{" "}
-              <span className="info-icon"><BsInfoCircleFill /></span>
-            </h5>
+    <div className="page-background">
+      <div className="main-container">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h5>GTM Acquisitions & Mergers</h5>
+        </div>
 
-            <div className="d-flex gap-2 btn-group-pill-toggle">
-              <div className="position-relative" ref={dropdownRef}>
-                <button
-                  className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
-                  onClick={() => {
-                    setViewMode("quarter");
-                    setShowDropdown((prev) => !prev);
-                  }}
-                >
-                  <span className="circle-indicator" />
-                  <span className="pill-label">Quarter Wise</span>
-                </button>
+        {/* Styled Select Year */}
+        <div className="mb-3 d-flex align-items-center">
+          <label className="me-2">Select Year:</label>
+          <div className="position-relative" ref={dropdownRef}>
+            <button
+              className="pill-toggle-btn active"
+              onClick={() => setShowDropdown((prev) => !prev)}
+            >
+              <span className="circle-indicator" />
+              <span className="pill-label">{selectedYear}</span>
+            </button>
 
-                {showDropdown && (
-                  <div className="custom-dropdown">
-                    {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
-                      <div
-                        key={idx}
-                        className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
-                        onClick={() => {
-                          setSelectedYear(year);
-                          setShowDropdown(false);
-                        }}
-                      >
-                        <span className={`radio-circle ${selectedYear === year ? "filled" : ""}`} />
-                        {year}
-                      </div>
-                    ))}
+            {showDropdown && (
+              <div className="custom-dropdown">
+                {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
+                  <div
+                    key={idx}
+                    className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
+                    onClick={() => {
+                      setSelectedYear(year);
+                      setShowDropdown(false);
+                    }}
+                  >
+                    <span className={`radio-circle ${selectedYear === year ? "filled" : ""}`} />
+                    {year}
                   </div>
-                )}
+                ))}
               </div>
+            )}
+          </div>
+        </div>
 
-              <button
-                className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
-                onClick={() => {
-                  setViewMode("year");
-                  setShowDropdown(false);
-                }}
-              >
-                <span className="circle-indicator" />
-                <span className="pill-label">Year Wise</span>
-              </button>
-
-              <button className="pill-toggle-btn no-dot">
-                <span className="pill-label">Download</span>
-              </button>
-            </div>
+        {/* Acquisition Cards */}
+        <div className="row g-3">
+          <div className="col-md-4">
+            <AcquisitionCard
+              title="Acquire: Full Broking House"
+              borderClass="border-revenue"
+              headerClass="bg-revenue"
+              quarters={
+                data["Full Broking House"]
+                  ? Object.values(data["Full Broking House"]).map((q) => ({
+                      count: q.count,
+                      amount: q.amount_per_acquisition / 10000000 // show in ₹Cr
+                    }))
+                  : []
+              }
+              onChange={(qi, field, value) =>
+                handleUpdate("Full Broking House", qi, field, value)
+              }
+            />
           </div>
 
-          <table className="table table-borderless table-hover revenue-table">
-            <thead>
-              <tr>
-                <th className="metrics-header">Metrics</th>
-                {getDisplayedQuarters().map((q, i) => (
-                  <th key={i} className="quarter-header">{q.label}</th>
-                ))}
-              </tr>
-            </thead>
+          <div className="col-md-4">
+            <AcquisitionCard
+              title="Acquire: GOP Based Broker Deals (Permanent)"
+              borderClass="border-customer"
+              headerClass="bg-customer"
+              quarters={
+                data["GOP Based Broker Deals"]
+                  ? Object.values(data["GOP Based Broker Deals"]).map((q) => ({
+                      count: q.count,
+                      amount: q.amount_per_acquisition / 10000000
+                    }))
+                  : []
+              }
+              onChange={(qi, field, value) =>
+                handleUpdate("GOP Based Broker Deals", qi, field, value)
+              }
+            />
+          </div>
 
-            <tbody>
-              {gtmMetricItems.map((metric, idx) => (
-                <React.Fragment key={idx}>
-                  <tr className="align-middle">
-                    <td>
-                      <div className="mb-1">{metric.label}</div>
-                      <div className="text-muted" style={{ fontSize: "12px" }}>
-                        {metric.type === "input" ? "Input" : "Auto"}
-                      </div>
-                    </td>
-
-                    {getDisplayedQuarters().map((q, qIdx) => {
-                      const metricData = sheetData?.[metric.label]?.[q.key];
-                      const value = metricData?.value ?? 0;
-                      const isCalculated = metricData?.is_calculated ?? false;
-
-                      return (
-                        <td key={qIdx}>
-                          {metric.type === "input" && !isCalculated && viewMode === "quarter" ? (
-                            <input
-                              type="number"
-                              className="form-control form-control-sm"
-                              value={value}
-                              onChange={(e) => handleInputChange(metric.label, qIdx, e)}
-                            />
-                          ) : (
-                            <span>{value.toLocaleString("en-IN")}</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-
-                  {metric.addGapAfter && (
-                    <tr className="gap-row">
-                      <td colSpan={quarters.length + 1}></td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
+          <div className="col-md-4">
+            <AcquisitionCard
+              title="Acquire: Secondary Market Deals"
+              borderClass="border-ratio"
+              headerClass="bg-ratio"
+              quarters={
+                data["Secondary Market Acquisitions"]
+                  ? Object.values(data["Secondary Market Acquisitions"]).map((q) => ({
+                      count: q.count,
+                      amount: q.amount_per_acquisition / 10000000
+                    }))
+                  : []
+              }
+              onChange={(qi, field, value) =>
+                handleUpdate("Secondary Market Acquisitions", qi, field, value)
+              }
+            />
+          </div>
         </div>
       </div>
     </div>
