@@ -24,6 +24,7 @@ ChartJS.register(
   Legend
 );
 
+// ===== Types =====
 interface Summary {
   current_revenue: number;
   total_customers: number;
@@ -62,20 +63,11 @@ interface DashboardAPIResponse {
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardAPIResponse | null>(null);
-  const [selectedYear, setSelectedYear] = useState<string>("");
 
   useEffect(() => {
     fetch("http://localhost:8000/api/dashboard-data")
       .then((res) => res.json())
-      .then((apiData: DashboardAPIResponse) => {
-        setData(apiData);
-
-        // Extract first available year from revenue data as default
-        const years = Array.from(
-          new Set(apiData.revenue.map((d) => d.quarter.split("Q")[0]))
-        );
-        setSelectedYear(years[0] || "");
-      })
+      .then((apiData: DashboardAPIResponse) => setData(apiData))
       .catch((err) => console.error("Error loading manager dashboard:", err));
   }, []);
 
@@ -84,22 +76,13 @@ export default function Dashboard() {
 
   if (!data) return <div className="loading">Loading...</div>;
 
-  // Extract unique years from revenue data
-  const years = Array.from(
-    new Set(data.revenue.map((d) => d.quarter.split("Q")[0]))
-  );
-
-  // Filter revenue data for the selected year
-  const filteredRevenue = data.revenue.filter((d) =>
-    d.quarter.startsWith(selectedYear)
-  );
-
+  // ===== Chart Data =====
   const revenueChartData = {
-    labels: filteredRevenue.map((d) => d.quarter),
+    labels: data.revenue.map((d) => d.quarter), // ["Y1Q1", "Y1Q2", ...]
     datasets: [
       {
         label: "Revenue (₹)",
-        data: filteredRevenue.map((d) => d.value),
+        data: data.revenue.map((d) => d.value),
         borderColor: "#ff5e62",
         backgroundColor: "rgba(255, 94, 98, 0.2)",
         fill: true,
@@ -137,7 +120,7 @@ export default function Dashboard() {
       {
         label: "Customers Added",
         data: data.gtm_impact.map((d) => d.customers),
-        backgroundColor: "#ec4899"
+        backgroundColor: "#ed7d22"
       },
       {
         label: "Investment (₹Cr)",
@@ -180,21 +163,6 @@ export default function Dashboard() {
           value={`₹${formatNumber(data.summary.current_revenue)}`}
           subText="+12% vs last year"
         >
-          {/* Year selector buttons */}
-          <div className="year-selector">
-            {years.map((year) => (
-              <button
-                key={year}
-                className={`year-btn ${
-                  year === selectedYear ? "active" : ""
-                }`}
-                onClick={() => setSelectedYear(year)}
-              >
-                {year}
-              </button>
-            ))}
-          </div>
-
           <Line
             data={revenueChartData}
             options={{
@@ -215,7 +183,7 @@ export default function Dashboard() {
 
         <ChartCard
           title="Unit Economics"
-          value="--"
+          value=""
           subText="+12% from last month"
         >
           <Doughnut
@@ -252,6 +220,7 @@ export default function Dashboard() {
   );
 }
 
+// ===== Reusable Components =====
 interface CardProps {
   title: string;
   value: string | number;
