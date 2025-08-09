@@ -71,6 +71,32 @@
   flex: 1;
 }
 
+.year-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.year-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.year-btn:hover {
+  background: #f5f5f5;
+}
+
+.year-btn.active {
+  background: #ff5e62;
+  color: white;
+  border-color: #ff5e62;
+}
+
 /* Responsive: On mobile, stack in one column */
 @media (max-width: 768px) {
   .charts-grid {

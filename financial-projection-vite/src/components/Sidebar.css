@@ -10,7 +10,6 @@
   background-color: #fff;
   border-right: 1px solid #eee;
   transition: width 0.3s ease;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   z-index: 1000;
@@ -20,14 +19,17 @@
   width: 100px;
 }
 
+/* Logo */
 .logo-section {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  
   height: 64px;
   box-sizing: border-box;
+  background-color: #fff;
+  z-index: 10;
 }
 
 .logo {
@@ -40,7 +42,7 @@
   max-width: 40px;
 }
 
-
+/* Toggle button */
 .toggle-btn {
   border: none;
   background: transparent;
@@ -51,11 +53,6 @@
   justify-content: center;
   outline: none;
 }
-.toggle-btn:focus {
-  outline: none;
-  box-shadow: none;
-}
-
 
 .arrow-icon {
   font-size: 24px;
@@ -67,6 +64,30 @@
   transform: rotate(180deg);
 }
 
+/* Scrollable menu container */
+.menu-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 10px;
+  scrollbar-width: thin;
+}
+
+/* Custom scrollbar */
+.menu-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.menu-container::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.menu-container::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+
+/* Menu section */
 .menu-section {
   margin-top: 10px;
 }
@@ -95,6 +116,18 @@
   margin-right: 12px;
 }
 
+/* Active menu styles */
+.menu-item.active {
+  background-color: #ed7d22;
+  color: #fff;
+  font-weight: 600;
+}
+
+.menu-item.active .icon {
+  color: #fff;
+}
+
+/* Collapsed menu active state */
 .sidebar.collapsed .menu-item.active {
   background-color: #ed7d22;
   color: #fff;
@@ -112,16 +145,6 @@
   margin-right: 0;
 }
 
-
-.menu-item.active {
-  background-color: #ed7d22;
-  color: #fff;
-  font-weight: 600;
-}
-
-.menu-item.active .icon {
-  color: #fff;
-}
 .sidebar.collapsed .menu-item {
   transition: none;
 }

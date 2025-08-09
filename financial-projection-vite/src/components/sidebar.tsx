@@ -2,7 +2,6 @@ import React from 'react';
 import './Sidebar.css';
 import { Link, useLocation } from 'react-router-dom';
 import { MdOutlineDashboardCustomize } from 'react-icons/md';
-
 import { IoIosArrowDropright } from 'react-icons/io';
 import { IoMdTrendingUp } from 'react-icons/io';
 import { LuCircleDollarSign, LuCalculator, LuWallet } from 'react-icons/lu';
@@ -19,14 +18,13 @@ interface SidebarProps {
 }
 
 const menu = [
-     {
+  {
     section: '',
     items: [
       { label: 'Dashboard', path: '/dashboard', icon: <MdOutlineDashboardCustomize /> },
     ],
   },
   {
-    
     section: 'Revenue & Growth',
     items: [
       { label: 'Growth Funnel', path: '/growth', icon: <IoMdTrendingUp /> },
@@ -59,35 +57,38 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
 
   return (
     <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-        <div className="logo-section">
-          <img
+      {/* Logo Section */}
+      <div className="logo-section">
+        <img
           src={collapsed ? "/image2.png" : "/image.png"}
           alt="Capovex Logo"
           className="logo"
-           />
-           <button onClick={() => setCollapsed(!collapsed)} className="toggle-btn">
+        />
+        <button onClick={() => setCollapsed(!collapsed)} className="toggle-btn">
           <IoIosArrowDropright
-           className={`arrow-icon ${collapsed ? '' : 'rotated'}`}
-           />
-          </button>
-        </div>
-     
-      {menu.map((section) => (
-        <div key={section.section} className="menu-section">
-          {!collapsed && <div className="section-title">{section.section}</div>}
+            className={`arrow-icon ${collapsed ? '' : 'rotated'}`}
+          />
+        </button>
+      </div>
 
-          {section.items.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`menu-item ${location.pathname === item.path ? 'active' : ''}`}
-            >
-              <span className="icon">{item.icon}</span>
-              {!collapsed && <span className="label">{item.label}</span>}
-            </Link>
-          ))}
-        </div>
-      ))}
+      {/* Scrollable Menu */}
+      <div className="menu-container">
+        {menu.map((section) => (
+          <div key={section.section} className="menu-section">
+            {!collapsed && <div className="section-title">{section.section}</div>}
+            {section.items.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`menu-item ${location.pathname === item.path ? 'active' : ''}`}
+              >
+                <span className="icon">{item.icon}</span>
+                {!collapsed && <span className="label">{item.label}</span>}
+              </Link>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
