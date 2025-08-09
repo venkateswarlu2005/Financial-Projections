@@ -4,18 +4,30 @@
 /* Global font */
 * {
   font-family: 'Poppins', sans-serif;
+  box-sizing: border-box;
 }
+
+/* Main container for consistent layout across screens */
+.main-container {
+  max-width: 1200px; /* fixed max width for consistent look */
+  margin: 0 auto; /* center horizontally */
+  padding: 20px;
+}
+
 /* Acquisition Card */
 .acq-card {
   background: #fff;
   border-radius: 12px;
-  padding: 0; /* remove top padding so header sits flush */
+  padding: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   border: 2px solid transparent;
-  overflow: hidden; /* ensures header corners are rounded */
+  overflow: hidden;
+  flex: 1;
+  min-width: 280px; /* avoid too small */
+  max-width: 380px; /* avoid overly wide */
 }
 
 /* Card color variations */
@@ -63,16 +75,15 @@
 .quarter-row {
   display: flex;
   align-items: center;
-  gap: 14px; /* slightly more space */
+  gap: 14px;
 }
 
 .quarter-row label {
-  flex: 0 0 100px; /* a bit wider for bigger text */
-  font-size: 1rem; /* bigger labels */
+  flex: 0 0 90px; /* fixed label size */
+  font-size: clamp(0.9rem, 1vw, 1rem);
   font-weight: 500;
 }
 
-/* Default input style */
 /* Default input style */
 .quarter-row input {
   padding: 8px 10px;
@@ -81,11 +92,10 @@
   background-color: #fff;
   width: 80px;
   outline: none;
-  font-size: 1rem; /* bigger input text */
-  color: #000; /* <-- ensure text color is black */
+  font-size: clamp(0.9rem, 1vw, 1rem);
+  color: #000;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-
 
 /* Larger width for amount */
 .amount-input {
@@ -114,12 +124,13 @@
   box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
 }
 
+/* Year selector and dropdown */
 .pill-toggle-btn {
   border: 1px solid #ccc;
   border-radius: 999px;
   background: #fff;
   padding: 6px 14px;
-  font-size: 14px;
+  font-size: clamp(0.85rem, 1vw, 0.95rem);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -185,4 +196,14 @@
 
 .pill-label {
   font-size: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .row.g-3 {
+    flex-direction: column;
+  }
+  .col-md-4 {
+    width: 100%;
+  }
 }
