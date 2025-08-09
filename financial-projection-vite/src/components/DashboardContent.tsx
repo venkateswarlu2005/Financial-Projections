@@ -109,7 +109,17 @@ export default function Dashboard() {
     datasets: [
       {
         data: Object.values(data.unit_economics),
-        backgroundColor: ["#facc15", "#6366f1", "#34d399", "#ef4444"]
+        backgroundColor: [
+  "#facc15", // Yellow
+  "#6366f1", // Indigo
+  "#34d399", // Green
+  "#ef4444", // Red
+  "#f97316", // Orange
+  "#06b6d4", // Cyan
+  "#a855f7", // Purple
+  "#84cc16"  // Lime
+]
+
       }
     ]
   };
