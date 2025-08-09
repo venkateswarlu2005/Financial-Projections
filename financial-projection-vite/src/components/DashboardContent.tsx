@@ -24,7 +24,6 @@ ChartJS.register(
   Legend
 );
 
-// ===== Types =====
 interface Summary {
   current_revenue: number;
   total_customers: number;
@@ -63,11 +62,20 @@ interface DashboardAPIResponse {
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardAPIResponse | null>(null);
+  const [selectedYear, setSelectedYear] = useState<string>("");
 
   useEffect(() => {
     fetch("http://localhost:8000/api/dashboard-data")
       .then((res) => res.json())
-      .then((apiData: DashboardAPIResponse) => setData(apiData))
+      .then((apiData: DashboardAPIResponse) => {
+        setData(apiData);
+
+        // Extract first available year from revenue data as default
+        const years = Array.from(
+          new Set(apiData.revenue.map((d) => d.quarter.split("Q")[0]))
+        );
+        setSelectedYear(years[0] || "");
+      })
       .catch((err) => console.error("Error loading manager dashboard:", err));
   }, []);
 
@@ -76,13 +84,22 @@ export default function Dashboard() {
 
   if (!data) return <div className="loading">Loading...</div>;
 
-  // ===== Chart Data =====
+  // Extract unique years from revenue data
+  const years = Array.from(
+    new Set(data.revenue.map((d) => d.quarter.split("Q")[0]))
+  );
+
+  // Filter revenue data for the selected year
+  const filteredRevenue = data.revenue.filter((d) =>
+    d.quarter.startsWith(selectedYear)
+  );
+
   const revenueChartData = {
-    labels: data.revenue.map((d) => d.quarter), // ["Y1Q1", "Y1Q2", ...]
+    labels: filteredRevenue.map((d) => d.quarter),
     datasets: [
       {
         label: "Revenue (₹)",
-        data: data.revenue.map((d) => d.value),
+        data: filteredRevenue.map((d) => d.value),
         borderColor: "#ff5e62",
         backgroundColor: "rgba(255, 94, 98, 0.2)",
         fill: true,
@@ -163,6 +180,21 @@ export default function Dashboard() {
           value={`₹${formatNumber(data.summary.current_revenue)}`}
           subText="+12% vs last year"
         >
+          {/* Year selector buttons */}
+          <div className="year-selector">
+            {years.map((year) => (
+              <button
+                key={year}
+                className={`year-btn ${
+                  year === selectedYear ? "active" : ""
+                }`}
+                onClick={() => setSelectedYear(year)}
+              >
+                {year}
+              </button>
+            ))}
+          </div>
+
           <Line
             data={revenueChartData}
             options={{
@@ -220,7 +252,6 @@ export default function Dashboard() {
   );
 }
 
-// ===== Reusable Components =====
 interface CardProps {
   title: string;
   value: string | number;
