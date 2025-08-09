@@ -37,7 +37,7 @@ function App() {
           <TopNavbar />
           <div className="page-content">
             <Routes>
-              <Route path="/" element={<Dashboard/>} />
+              <Route path="/dashboard" element={<Dashboard/>} />
               <Route path="/revenue" element={<Revenue/>} />
               <Route path="/unit-economics" element={<UnitEconomics/>} />
               <Route path="/growth" element={<Growth/>} />

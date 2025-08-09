@@ -1,0 +1,71 @@
+.dashboard {
+  padding: 1rem;
+  background: #fef6f3;
+  font-family: 'Poppins', sans-serif;
+}
+
+.summary-cards {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  flex: 1;
+  min-width: 180px;
+}
+
+.card-title {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.card-value {
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin-top: 0.2rem;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.chart-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  height: 400px;
+}
+
+.chart-header {
+  margin-bottom: 0.5rem;
+}
+
+.chart-title {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.chart-value {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.chart-subtext {
+  color: green;
+  font-size: 0.8rem;
+}
+
+.chart-body {
+  flex: 1;
+}
