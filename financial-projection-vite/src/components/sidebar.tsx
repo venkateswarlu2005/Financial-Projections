@@ -7,7 +7,7 @@ import { IoMdTrendingUp } from 'react-icons/io';
 import { LuCircleDollarSign, LuCalculator, LuWallet } from 'react-icons/lu';
 import { FiCpu } from 'react-icons/fi';
 import { HiOutlineUserGroup } from 'react-icons/hi';
-import { AiOutlineBank } from 'react-icons/ai';
+import { AiOutlineBank, AiOutlineMergeCells } from 'react-icons/ai';
 import { RiBugLine } from 'react-icons/ri';
 import { PiGraphLight } from 'react-icons/pi';
 import { GrMoney } from 'react-icons/gr';
@@ -44,12 +44,12 @@ const menu = [
   {
     section: 'Revenue & Expenses',
     items: [
-      { label: 'Revenue', path: '/revenue', icon: <AiOutlineBank /> },
+      { label: 'Revenue', path: '/revenue', icon: <LuCircleDollarSign /> },
       { label: 'Growth Funnel', path: '/growth', icon:<IoMdTrendingUp />  },
        { label: 'OpEx', path: '/opex', icon: <FiCpu /> },
       { label: 'Salaries', path: '/salaries', icon: <HiOutlineUserGroup /> },
       { label: 'CapEx', path: '/capex', icon: <AiOutlineBank /> },
-      { label: 'M&A', path: '/M&A', icon: <AiOutlineBank /> },
+      { label: 'M&A', path: '/M&A', icon: <AiOutlineMergeCells /> },
     ],
   },
 ];
