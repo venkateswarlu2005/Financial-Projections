@@ -145,11 +145,11 @@ export default function Dashboard() {
       {/* Summary Cards */}
       <div className="summary-cards">
         <Card
-          title="Current Quarter Revenue"
+          title="Book Value per Share"
           value={`₹${formatNumber(data.summary.current_revenue)}`}
         />
         <Card
-          title="Total Customers"
+          title="Total Users"
           value={formatNumber(data.summary.total_customers)}
         />
         <Card
@@ -157,11 +157,11 @@ export default function Dashboard() {
           value={`${data.summary.ltv_cac_ratio.toFixed(1)}:1`}
         />
         <Card
-          title="Monthly Burn (Adjusted)"
-          value={`₹${formatNumber(data.summary.burn_rate)}`}
+          title="Monthly churn Rate"
+          value={`0.0375(₹ in cr)`}
         />
         <Card
-          title="Total GTM Investment"
+          title="Closed Round"
           value={`₹${formatNumber(data.summary.total_gtm_investment)}`}
         />
       </div>
@@ -169,7 +169,7 @@ export default function Dashboard() {
       {/* Charts in 2×2 grid */}
       <div className="charts-grid">
         <ChartCard
-          title="Revenue Trend"
+          title="Revenue Projections"
           value={`₹${formatNumber(data.summary.current_revenue)}`}
           subText="+12% vs last year"
         >
@@ -192,7 +192,7 @@ export default function Dashboard() {
         </ChartCard>
 
         <ChartCard
-          title="Unit Economics"
+          title="Revenue Diversification"
           value=""
           subText="+12% from last month"
         >
@@ -216,7 +216,7 @@ export default function Dashboard() {
         </ChartCard>
 
         <ChartCard
-          title="GTM Impact"
+          title="DP-Evaluation"
           value={`₹${formatNumber(data.summary.total_gtm_investment)}`}
           subText="Latest GTM data"
         >
