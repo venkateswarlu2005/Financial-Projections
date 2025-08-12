@@ -48,7 +48,7 @@ function App() {
               <Route path="/valuation" element={<Valuation/>} />
               <Route path="/stress-testing" element={<StressTesting/>} />
               <Route path="/scenario-analysis" element={<ScenarioAnalysis/>} />
-              <Route path="//PnL-Statement" element={<Financial/>} />
+              <Route path="/PnL-Statement" element={<Financial/>} />
             </Routes>
           </div>
         </div>

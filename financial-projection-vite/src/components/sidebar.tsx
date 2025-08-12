@@ -44,7 +44,7 @@ const menu = [
   {
     section: 'Revenue & Expenses',
     items: [
-      
+      { label: 'Revenue', path: '/revenue', icon: <AiOutlineBank /> },
       { label: 'Growth Funnel', path: '/growth', icon:<IoMdTrendingUp />  },
        { label: 'OpEx', path: '/opex', icon: <FiCpu /> },
       { label: 'Salaries', path: '/salaries', icon: <HiOutlineUserGroup /> },
