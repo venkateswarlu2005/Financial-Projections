@@ -7,7 +7,7 @@ import { IoMdTrendingUp } from 'react-icons/io';
 import { LuCircleDollarSign, LuCalculator, LuWallet } from 'react-icons/lu';
 import { FiCpu } from 'react-icons/fi';
 import { HiOutlineUserGroup } from 'react-icons/hi';
-import { AiOutlineBank, AiOutlineMergeCells } from 'react-icons/ai';
+import { AiOutlineBank } from 'react-icons/ai';
 import { RiBugLine } from 'react-icons/ri';
 import { PiGraphLight } from 'react-icons/pi';
 import { GrMoney } from 'react-icons/gr';
@@ -25,29 +25,31 @@ const menu = [
     ],
   },
   {
-    section: 'Revenue & Growth',
+    section: 'Financials',
     items: [
-      { label: 'Growth Funnel', path: '/growth', icon: <IoMdTrendingUp /> },
-      { label: 'Revenue', path: '/revenue', icon: <LuCircleDollarSign /> },
+      { label: 'Cashflow statement', path: '/growth', icon: <IoMdTrendingUp /> },
+      { label: 'Profit and Loss statement', path: '/PnL-Statement', icon: <LuCircleDollarSign /> },
+      { label: 'Valuation', path: '/valuation', icon: <LuWallet/> },
       { label: 'Unit Economics', path: '/unit-economics', icon: <LuCalculator /> },
     ],
   },
   {
     section: 'Financials',
     items: [
-      { label: 'OpEx', path: '/opex', icon: <FiCpu /> },
-      { label: 'Salaries', path: '/salaries', icon: <HiOutlineUserGroup /> },
-      { label: 'CapEx', path: '/capex', icon: <AiOutlineBank /> },
+      { label: 'Stress Testing', path: '/stress-testing', icon: <RiBugLine /> },
+      { label: 'Scenario Analysis', path: '/scenario-analysis', icon: <PiGraphLight /> },
+     
     ],
   },
   {
-    section: 'Strategy',
+    section: 'Revenue & Expenses',
     items: [
-      { label: 'GTM Mergers', path: '/gtm-mergers', icon: <AiOutlineMergeCells /> },
-      { label: 'Financials', path: '/financial', icon: <GrMoney /> },
-      { label: 'Valuation', path: '/valuation', icon: <LuWallet /> },
-      { label: 'Stress Testing', path: '/stress-testing', icon: <RiBugLine /> },
-      { label: 'Scenario Analysis', path: '/scenario-analysis', icon: <PiGraphLight /> },
+      
+      { label: 'Growth Funnel', path: '/growth', icon: <GrMoney /> },
+       { label: 'OpEx', path: '/opex', icon: <FiCpu /> },
+      { label: 'Salaries', path: '/salaries', icon: <HiOutlineUserGroup /> },
+      { label: 'CapEx', path: '/capex', icon: <AiOutlineBank /> },
+      { label: 'M&A', path: '/M&A', icon: <AiOutlineBank /> },
     ],
   },
 ];

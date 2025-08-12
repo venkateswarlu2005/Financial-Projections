@@ -1,6 +1,4 @@
-/* === GLOBAL === */
-/* Main stress testing container background */
-/* Make the whole section full height & width with soft background */
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600&display=swap');
 .stress-testing {
   min-height: 100vh;
   width: 100%;
@@ -10,7 +8,7 @@
   flex-direction: column; /* <- ADD THIS */
   justify-content: flex-start; /* <- change from center to top align */
   align-items: center; /* <- keep items centered horizontally */
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Open Sans', sans-serif;
   box-sizing: border-box;
 }
 

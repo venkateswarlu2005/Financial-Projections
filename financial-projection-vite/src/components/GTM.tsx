@@ -140,7 +140,7 @@ const GTM: React.FC = () => {
     <div className="page-background">
       <div className="main-container">
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h5>GTM Acquisitions & Mergers</h5>
+          <h5>M&A</h5>
         </div>
 
         {/* Year Selector */}

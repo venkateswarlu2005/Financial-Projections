@@ -1,9 +1,8 @@
-/* Import Poppins font */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600&display=swap');
 
 /* Apply font globally */
 * {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Open Sans', sans-serif;
 }
 
 /* Page background */
@@ -74,7 +73,7 @@
   color: #6c757d;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .metric-label span {

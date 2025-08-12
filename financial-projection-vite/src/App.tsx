@@ -44,11 +44,11 @@ function App() {
               <Route path="/opex" element={<OpEx/>} />
               <Route path="/salaries" element={<Salaries/>} />
               <Route path="/capex" element={<CapEx/>} />
-              <Route path="/gtm-mergers" element={<GTM/>} />
+              <Route path="/M&A" element={<GTM/>} />
               <Route path="/valuation" element={<Valuation/>} />
               <Route path="/stress-testing" element={<StressTesting/>} />
               <Route path="/scenario-analysis" element={<ScenarioAnalysis/>} />
-              <Route path="/financial" element={<Financial/>} />
+              <Route path="//PnL-Statement" element={<Financial/>} />
             </Routes>
           </div>
         </div>

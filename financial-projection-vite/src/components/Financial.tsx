@@ -126,7 +126,7 @@ const Financial: React.FC = () => {
         <div className="container mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
-              Financial Metrics <span className="info-icon"><BsInfoCircleFill /></span>
+              Profit and Loss Statements <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
