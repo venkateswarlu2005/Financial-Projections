@@ -24,71 +24,57 @@ ChartJS.register(
   Legend
 );
 
-// ===== Types =====
-interface GrowthFunnelData {
-  row_name: string;
-  [quarter: string]: string | number; // quarter keys like "Y1Q1"
-}
-
 export default function Dashboard() {
   const [growthData, setGrowthData] = useState<number[]>([]);
+  const [quarterLabels, setQuarterLabels] = useState<string[]>([]);
   const [totalUsers, setTotalUsers] = useState<number>(0);
 
-useEffect(() => {
-  const fetchLatestYearData = async () => {
-    try {
-      for (let year = 5; year >= 1; year--) {
-        const res = await fetch(
-          `http://localhost:8000/api/sheet-data/growth-funnel/${year}`
-        );
-        const apiData: Record<
-          string,
-          Record<string, { value: number; is_calculated: boolean }>
-        > = await res.json();
+  useEffect(() => {
+    const fetchLatestYearData = async () => {
+      try {
+        for (let year = 5; year >= 1; year--) {
+          const res = await fetch(
+            `http://localhost:8000/api/sheet-data/growth-funnel/${year}`
+          );
+          const apiData: Record<
+            string,
+            Record<string, { value: number; is_calculated: boolean }>
+          > = await res.json();
 
-        // Get the Total Net Users row from API
-        const totalNetUsersRow = apiData["Total Net Users"];
-        if (!totalNetUsersRow) continue;
+          const totalNetUsersRow = apiData["Total Net Users"];
+          if (!totalNetUsersRow) continue;
 
-        // Sort quarter keys so they're always in order
-        const quarters = Object.keys(totalNetUsersRow)
-          .filter(k => k.startsWith(`Y${year}`))
-          .sort();
+          // Sort quarters properly (Y1Q1 → Y1Q4)
+          const quarters = Object.keys(totalNetUsersRow)
+            .filter((k) => k.startsWith(`Y${year}`))
+            .sort();
 
-        // Get values for each quarter
-        const quarterValues = quarters.map(
-          q => totalNetUsersRow[q]?.value ?? 0
-        );
+          const values = quarters.map((q) => totalNetUsersRow[q]?.value ?? 0);
 
-        if (quarterValues.some(v => v > 0)) {
-          setGrowthData(quarterValues);
-
-          // Last quarter's value
-          const lastQuarterValue =
-            quarterValues[quarterValues.length - 1] || 0;
-          setTotalUsers(lastQuarterValue);
-
-          break; // stop after finding the latest year with data
+          if (values.some((v) => v > 0)) {
+            setQuarterLabels(quarters.map((q) => q.split("Q")[1])); // Label as Q1, Q2, Q3...
+            setGrowthData(values);
+            setTotalUsers(values[values.length - 1] || 0); // Last quarter value
+            break;
+          }
         }
+      } catch (err) {
+        console.error("Error fetching growth funnel data:", err);
       }
-    } catch (err) {
-      console.error("Error fetching growth funnel data:", err);
-    }
-  };
+    };
 
-  fetchLatestYearData();
-}, []);
-
+    fetchLatestYearData();
+  }, []);
 
   const formatNumber = (num: number) =>
     num?.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
-  // ===== Chart Data =====
+  // Chart Data for Bar Graph
   const growthChartData = {
-    labels: growthData.map((_, idx) => `Q${idx + 1}`),
+    labels: quarterLabels.map((q) => `Q${q}`),
     datasets: [
       {
-        label: "Total Customers",
+        label: "Total Net Users",
         data: growthData,
         backgroundColor: "#f97316"
       }
@@ -118,26 +104,18 @@ useEffect(() => {
 
       {/* Charts in 2×2 grid */}
       <div className="charts-grid">
-        <ChartCard
-          title="Revenue Projections"
-          value={`NAN`}
-          subText=""
-        >
+        <ChartCard title="Revenue Projections" value={`NAN`} subText="">
           <Line data={dummyChartData} />
         </ChartCard>
 
-        <ChartCard
-          title="Revenue Diversification"
-          value=""
-          subText=""
-        >
+        <ChartCard title="Revenue Diversification" value="" subText="">
           <Doughnut data={dummyChartData} />
         </ChartCard>
 
         <ChartCard
           title="Customer Growth"
           value={formatNumber(totalUsers)}
-          subText=""
+          subText="Last Quarter"
         >
           <Bar
             data={growthChartData}
@@ -145,11 +123,7 @@ useEffect(() => {
           />
         </ChartCard>
 
-        <ChartCard
-          title="DP-Evaluation"
-          value={`NAN`}
-          subText=""
-        >
+        <ChartCard title="DP-Evaluation" value={`NAN`} subText="">
           <Bar data={dummyChartData} />
         </ChartCard>
       </div>
