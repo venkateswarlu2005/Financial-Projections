@@ -35,26 +35,38 @@ export default function Dashboard() {
   const [totalUsers, setTotalUsers] = useState<number>(0);
 
   useEffect(() => {
-    const year = 2025; // can be dynamic
-    fetch(`http://localhost:8000/api/sheet-data/growth-funnel/${year}`)
-      .then(res => res.json())
-      .then((apiData: { data: GrowthFunnelData[] }) => {
-        const totalNetUsersRow = apiData.data.find(
-          row => row.row_name.toLowerCase() === "total net users"
-        );
+    const fetchLatestYearData = async () => {
+      try {
+        // Loop from latest year (5) to earliest (1)
+        for (let year = 5; year >= 1; year--) {
+          const res = await fetch(`http://localhost:8000/api/sheet-data/growth-funnel/${year}`);
+          const apiData: { data: GrowthFunnelData[] } = await res.json();
 
-        if (totalNetUsersRow) {
-          const quarters = Object.entries(totalNetUsersRow)
-            .filter(([key]) => key.startsWith("Y"))
-            .map(([_, val]) => Number(val) || 0);
+          const totalNetUsersRow = apiData.data.find(
+            row => row.row_name.toLowerCase() === "total net users"
+          );
 
-          setGrowthData(quarters);
+          if (totalNetUsersRow) {
+            const quarters = Object.entries(totalNetUsersRow)
+              .filter(([key]) => key.startsWith("Y"))
+              .map(([_, val]) => Number(val) || 0);
 
-          const lastNonZero = [...quarters].reverse().find(v => v > 0) || 0;
-          setTotalUsers(lastNonZero);
+            // If any quarter has a non-zero value
+            if (quarters.some(v => v > 0)) {
+              setGrowthData(quarters);
+
+              const lastNonZero = [...quarters].reverse().find(v => v > 0) || 0;
+              setTotalUsers(lastNonZero);
+              break; // Stop when found latest valid year
+            }
+          }
         }
-      })
-      .catch(err => console.error("Error fetching growth funnel data:", err));
+      } catch (err) {
+        console.error("Error fetching growth funnel data:", err);
+      }
+    };
+
+    fetchLatestYearData();
   }, []);
 
   const formatNumber = (num: number) =>
@@ -97,7 +109,7 @@ export default function Dashboard() {
       <div className="charts-grid">
         <ChartCard
           title="Revenue Projections"
-          value={``}
+          value={`NAN`}
           subText=""
         >
           <Line data={dummyChartData} />
@@ -124,7 +136,7 @@ export default function Dashboard() {
 
         <ChartCard
           title="DP-Evaluation"
-          value={``}
+          value={`NAN`}
           subText=""
         >
           <Bar data={dummyChartData} />
