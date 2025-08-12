@@ -25,117 +25,59 @@ ChartJS.register(
 );
 
 // ===== Types =====
-interface Summary {
-  current_revenue: number;
-  total_customers: number;
-  ltv_cac_ratio: number;
-  burn_rate: number;
-  total_gtm_investment: number;
-}
-
-interface RevenueData {
-  quarter: string;
-  value: number;
-}
-
-interface CustomerData {
-  quarter: string;
-  value: number;
-}
-
-interface UnitEconomics {
-  [key: string]: number;
-}
-
-interface GTMImpact {
-  type: string;
-  customers: number;
-  investment: number;
-}
-
-interface DashboardAPIResponse {
-  summary: Summary;
-  revenue: RevenueData[];
-  customers: CustomerData[];
-  unit_economics: UnitEconomics;
-  gtm_impact: GTMImpact[];
+interface GrowthFunnelData {
+  row_name: string;
+  [quarter: string]: string | number; // quarter keys like "Y1Q1"
 }
 
 export default function Dashboard() {
-  const [data, setData] = useState<DashboardAPIResponse | null>(null);
+  const [growthData, setGrowthData] = useState<number[]>([]);
+  const [totalUsers, setTotalUsers] = useState<number>(0);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/dashboard-data")
-      .then((res) => res.json())
-      .then((apiData: DashboardAPIResponse) => setData(apiData))
-      .catch((err) => console.error("Error loading manager dashboard:", err));
+    const year = 2025; // can be dynamic
+    fetch(`http://localhost:8000/api/sheet-data/growth-funnel/${year}`)
+      .then(res => res.json())
+      .then((apiData: { data: GrowthFunnelData[] }) => {
+        const totalNetUsersRow = apiData.data.find(
+          row => row.row_name.toLowerCase() === "total net users"
+        );
+
+        if (totalNetUsersRow) {
+          const quarters = Object.entries(totalNetUsersRow)
+            .filter(([key]) => key.startsWith("Y"))
+            .map(([_, val]) => Number(val) || 0);
+
+          setGrowthData(quarters);
+
+          const lastNonZero = [...quarters].reverse().find(v => v > 0) || 0;
+          setTotalUsers(lastNonZero);
+        }
+      })
+      .catch(err => console.error("Error fetching growth funnel data:", err));
   }, []);
 
   const formatNumber = (num: number) =>
     num?.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
-  if (!data) return <div className="loading">Loading...</div>;
-
   // ===== Chart Data =====
-  const revenueChartData = {
-    labels: data.revenue.map((d) => d.quarter), // ["Y1Q1", "Y1Q2", ...]
-    datasets: [
-      {
-        label: "Revenue (₹)",
-        data: data.revenue.map((d) => d.value),
-        borderColor: "#ff5e62",
-        backgroundColor: "rgba(255, 94, 98, 0.2)",
-        fill: true,
-        tension: 0.3,
-        pointRadius: 5,
-        pointBackgroundColor: "#ff5e62"
-      }
-    ]
-  };
-
   const growthChartData = {
-    labels: data.customers.map((d) => d.quarter),
+    labels: growthData.map((_, idx) => `Q${idx + 1}`),
     datasets: [
       {
         label: "Total Customers",
-        data: data.customers.map((d) => d.value),
+        data: growthData,
         backgroundColor: "#f97316"
       }
     ]
   };
 
-  const unitEconomicsChartData = {
-    labels: Object.keys(data.unit_economics),
+  const dummyChartData = {
+    labels: [],
     datasets: [
       {
-        data: Object.values(data.unit_economics),
-        backgroundColor: [
-  "#facc15", // Yellow
-  "#6366f1", // Indigo
-  "#34d399", // Green
-  "#ef4444", // Red
-  "#f97316", // Orange
-  "#06b6d4", // Cyan
-  "#a855f7", // Purple
-  "#84cc16"  // Lime
-]
-
-      }
-    ]
-  };
-
-  const gtmChartData = {
-    labels: data.gtm_impact.map((d) => d.type),
-    datasets: [
-      {
-        label: "Customers Added",
-        data: data.gtm_impact.map((d) => d.customers),
-        backgroundColor: "#ed7d22"
-      },
-      {
-        label: "Investment (₹Cr)",
-        data: data.gtm_impact.map((d) => d.investment / 10000000),
-        backgroundColor: "#3b82f6"
+        data: [],
+        backgroundColor: []
       }
     ]
   };
@@ -144,70 +86,35 @@ export default function Dashboard() {
     <div className="dashboard">
       {/* Summary Cards */}
       <div className="summary-cards">
-        <Card
-          title="Book Value per Share"
-          value={`₹${formatNumber(data.summary.current_revenue)}`}
-        />
-        <Card
-          title="Total Users"
-          value={formatNumber(data.summary.total_customers)}
-        />
-        <Card
-          title="LTV / CAC Ratio"
-          value={`${data.summary.ltv_cac_ratio.toFixed(1)}:1`}
-        />
-        <Card
-          title="Monthly churn Rate"
-          value={`0.0375(₹ in cr)`}
-        />
-        <Card
-          title="Closed Round"
-          value={`₹${formatNumber(data.summary.total_gtm_investment)}`}
-        />
+        <Card title="Book Value per Share" value={`NAN`} />
+        <Card title="Total Users" value={formatNumber(totalUsers)} />
+        <Card title="LTV / CAC Ratio" value={`NAN`} />
+        <Card title="Monthly churn Rate" value={`NAN`} />
+        <Card title="Closed Round" value={`NAN`} />
       </div>
 
       {/* Charts in 2×2 grid */}
       <div className="charts-grid">
         <ChartCard
           title="Revenue Projections"
-          value={`₹${formatNumber(data.summary.current_revenue)}`}
-          subText="+12% vs last year"
+          value={``}
+          subText=""
         >
-          <Line
-            data={revenueChartData}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                y: {
-                  ticks: {
-                    callback: function (value) {
-                      return `₹${Number(value).toLocaleString("en-IN")}`;
-                    }
-                  }
-                }
-              }
-            }}
-          />
+          <Line data={dummyChartData} />
         </ChartCard>
 
         <ChartCard
           title="Revenue Diversification"
           value=""
-          subText="+12% from last month"
+          subText=""
         >
-          <Doughnut
-            data={unitEconomicsChartData}
-            options={{ responsive: true, maintainAspectRatio: false }}
-          />
+          <Doughnut data={dummyChartData} />
         </ChartCard>
 
         <ChartCard
           title="Customer Growth"
-          value={formatNumber(
-            data.customers[data.customers.length - 1]?.value || 0
-          )}
-          subText="+12% vs last year"
+          value={formatNumber(totalUsers)}
+          subText=""
         >
           <Bar
             data={growthChartData}
@@ -217,13 +124,10 @@ export default function Dashboard() {
 
         <ChartCard
           title="DP-Evaluation"
-          value={`₹${formatNumber(data.summary.total_gtm_investment)}`}
-          subText="Latest GTM data"
+          value={``}
+          subText=""
         >
-          <Bar
-            data={gtmChartData}
-            options={{ responsive: true, maintainAspectRatio: false }}
-          />
+          <Bar data={dummyChartData} />
         </ChartCard>
       </div>
     </div>
