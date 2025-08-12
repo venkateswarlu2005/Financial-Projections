@@ -34,26 +34,41 @@ export default function Dashboard() {
   const [growthData, setGrowthData] = useState<number[]>([]);
   const [totalUsers, setTotalUsers] = useState<number>(0);
 
-  useEffect(() => {
+useEffect(() => {
   const fetchLatestYearData = async () => {
     try {
       for (let year = 5; year >= 1; year--) {
-        const res = await fetch(`http://localhost:8000/api/sheet-data/growth-funnel/${year}`);
-        const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> = await res.json();
+        const res = await fetch(
+          `http://localhost:8000/api/sheet-data/growth-funnel/${year}`
+        );
+        const apiData: Record<
+          string,
+          Record<string, { value: number; is_calculated: boolean }>
+        > = await res.json();
 
+        // Get the Total Net Users row from API
         const totalNetUsersRow = apiData["Total Net Users"];
-        if (totalNetUsersRow) {
-          const quarters = Object.entries(totalNetUsersRow)
-            .filter(([key]) => key.startsWith("Y"))
-            .map(([_, obj]) => obj?.value || 0);
+        if (!totalNetUsersRow) continue;
 
-          if (quarters.some(v => v > 0)) {
-            setGrowthData(quarters);
+        // Sort quarter keys so they're always in order
+        const quarters = Object.keys(totalNetUsersRow)
+          .filter(k => k.startsWith(`Y${year}`))
+          .sort();
 
-            const lastNonZero = [...quarters].reverse().find(v => v > 0) || 0;
-            setTotalUsers(lastNonZero);
-            break;
-          }
+        // Get values for each quarter
+        const quarterValues = quarters.map(
+          q => totalNetUsersRow[q]?.value ?? 0
+        );
+
+        if (quarterValues.some(v => v > 0)) {
+          setGrowthData(quarterValues);
+
+          // Last quarter's value
+          const lastQuarterValue =
+            quarterValues[quarterValues.length - 1] || 0;
+          setTotalUsers(lastQuarterValue);
+
+          break; // stop after finding the latest year with data
         }
       }
     } catch (err) {
@@ -63,6 +78,7 @@ export default function Dashboard() {
 
   fetchLatestYearData();
 }, []);
+
 
   const formatNumber = (num: number) =>
     num?.toLocaleString("en-IN", { maximumFractionDigits: 0 });
