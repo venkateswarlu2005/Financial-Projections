@@ -35,39 +35,34 @@ export default function Dashboard() {
   const [totalUsers, setTotalUsers] = useState<number>(0);
 
   useEffect(() => {
-    const fetchLatestYearData = async () => {
-      try {
-        // Loop from latest year (5) to earliest (1)
-        for (let year = 5; year >= 1; year--) {
-          const res = await fetch(`http://localhost:8000/api/sheet-data/growth-funnel/${year}`);
-          const apiData: { data: GrowthFunnelData[] } = await res.json();
+  const fetchLatestYearData = async () => {
+    try {
+      for (let year = 5; year >= 1; year--) {
+        const res = await fetch(`http://localhost:8000/api/sheet-data/growth-funnel/${year}`);
+        const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> = await res.json();
 
-          const totalNetUsersRow = apiData.data.find(
-            row => row.row_name.toLowerCase() === "total net users"
-          );
+        const totalNetUsersRow = apiData["Total Net Users"];
+        if (totalNetUsersRow) {
+          const quarters = Object.entries(totalNetUsersRow)
+            .filter(([key]) => key.startsWith("Y"))
+            .map(([_, obj]) => obj?.value || 0);
 
-          if (totalNetUsersRow) {
-            const quarters = Object.entries(totalNetUsersRow)
-              .filter(([key]) => key.startsWith("Y"))
-              .map(([_, val]) => Number(val) || 0);
+          if (quarters.some(v => v > 0)) {
+            setGrowthData(quarters);
 
-            // If any quarter has a non-zero value
-            if (quarters.some(v => v > 0)) {
-              setGrowthData(quarters);
-
-              const lastNonZero = [...quarters].reverse().find(v => v > 0) || 0;
-              setTotalUsers(lastNonZero);
-              break; // Stop when found latest valid year
-            }
+            const lastNonZero = [...quarters].reverse().find(v => v > 0) || 0;
+            setTotalUsers(lastNonZero);
+            break;
           }
         }
-      } catch (err) {
-        console.error("Error fetching growth funnel data:", err);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching growth funnel data:", err);
+    }
+  };
 
-    fetchLatestYearData();
-  }, []);
+  fetchLatestYearData();
+}, []);
 
   const formatNumber = (num: number) =>
     num?.toLocaleString("en-IN", { maximumFractionDigits: 0 });
