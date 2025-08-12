@@ -35,7 +35,7 @@ const CapEx: React.FC = () => {
         key: getQuarterKey(selectedYear, i),
       }));
     } else {
-      return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, i) => ({
+      return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((_year, i) => ({
         label: `Y${i + 1}`,
         key: `Y${i + 1}Q4`,
       }));

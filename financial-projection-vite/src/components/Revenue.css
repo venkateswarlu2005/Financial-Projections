@@ -1,5 +1,6 @@
 /* === Revenue Table Styles === */
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600&display=swap');
+
 .my-heading, .info-icon, .dropdown-toggle, .dropdown-menu {
   font-family: 'Open Sans', sans-serif;
 }

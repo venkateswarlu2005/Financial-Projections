@@ -62,7 +62,7 @@ const OpEx: React.FC = () => {
         key: getQuarterKey(selectedYear, i),
       }));
     } else {
-      return years.map((year, i) => ({
+      return years.map((_year, i) => ({
         label: `Y${i + 1}`,
         key: `Y${i + 1}Q4`,
       }));
