@@ -26,55 +26,40 @@ ChartJS.register(
 
 export default function Dashboard() {
   const [growthData, setGrowthData] = useState<number[]>([]);
-  const [quarterLabels, setQuarterLabels] = useState<string[]>([]);
   const [totalUsers, setTotalUsers] = useState<number>(0);
 
   useEffect(() => {
-    const fetchLatestYearData = async () => {
+    const fetchGrowthData = async () => {
       try {
-        for (let year = 5; year >= 1; year--) {
-          const res = await fetch(
-            `http://localhost:8000/api/sheet-data/growth-funnel/${year}`
-          );
-          const apiData: Record<
-            string,
-            Record<string, { value: number; is_calculated: boolean }>
-          > = await res.json();
+        const res = await fetch(`http://localhost:8000/api/sheet-data/growth-funnel/1`);
+        const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> = await res.json();
 
-          const totalNetUsersRow = apiData["Total Net Users"];
-          if (!totalNetUsersRow) continue;
+        const totalNetUsersRow = apiData["Total Net Users"];
+        if (totalNetUsersRow) {
+          // Sort quarters so they're always in order (Y1Q1 → Y1Q4)
+          const quarters = Object.keys(totalNetUsersRow).sort();
+          const values = quarters.map(q => totalNetUsersRow[q]?.value ?? 0);
 
-          // Sort quarters properly (Y1Q1 → Y1Q4)
-          const quarters = Object.keys(totalNetUsersRow)
-            .filter((k) => k.startsWith(`Y${year}`))
-            .sort();
-
-          const values = quarters.map((q) => totalNetUsersRow[q]?.value ?? 0);
-
-          if (values.some((v) => v > 0)) {
-            setQuarterLabels(quarters.map((q) => q.split("Q")[1])); // Label as Q1, Q2, Q3...
-            setGrowthData(values);
-            setTotalUsers(values[values.length - 1] || 0); // Last quarter value
-            break;
-          }
+          setGrowthData(values);
+          setTotalUsers(values[values.length - 1] || 0);
         }
       } catch (err) {
         console.error("Error fetching growth funnel data:", err);
       }
     };
 
-    fetchLatestYearData();
+    fetchGrowthData();
   }, []);
 
   const formatNumber = (num: number) =>
     num?.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
-  // Chart Data for Bar Graph
+  // Chart Data
   const growthChartData = {
-    labels: quarterLabels.map((q) => `Q${q}`),
+    labels: growthData.map((_, idx) => `Q${idx + 1}`),
     datasets: [
       {
-        label: "Total Net Users",
+        label: "Total Customers",
         data: growthData,
         backgroundColor: "#f97316"
       }
@@ -102,7 +87,7 @@ export default function Dashboard() {
         <Card title="Closed Round" value={`NAN`} />
       </div>
 
-      {/* Charts in 2×2 grid */}
+      {/* Charts */}
       <div className="charts-grid">
         <ChartCard title="Revenue Projections" value={`NAN`} subText="">
           <Line data={dummyChartData} />
@@ -115,7 +100,7 @@ export default function Dashboard() {
         <ChartCard
           title="Customer Growth"
           value={formatNumber(totalUsers)}
-          subText="Last Quarter"
+          subText=""
         >
           <Bar
             data={growthChartData}
