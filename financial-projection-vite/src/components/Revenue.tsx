@@ -13,7 +13,7 @@ const metricItems = [
   { label: "Average Active PMS Users", type: "auto" },
   { label: "Management Fee from PMS", type: "input" },
   { label: "PMS Revenue", type: "auto", addGapAfter: true },
-  { label: "AI Subscription Revenue Per User (₹)", type: "input",  },
+  { label: "AI Subscription Revenue Per User (₹)", type: "input" },
   { label: "Average Active Subscription Users", type: "auto" },
   { label: "Revenue from Subscriptions", type: "auto", addGapAfter: true },
   { label: "Average Monthly AUM MF", type: "input" },
@@ -65,7 +65,7 @@ const Revenue: React.FC = () => {
         key: getQuarterKey(selectedYear, i),
       }));
     } else {
-      return ["Year 1", "Year 2", "Year 3","year 4","year 5"].map((year, i) => ({
+      return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((_year, i) => ({
         label: `Y${i + 1}`,
         key: `Y${i + 1}Q4`,
       }));
@@ -78,7 +78,6 @@ const Revenue: React.FC = () => {
         setShowDropdown(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -86,7 +85,6 @@ const Revenue: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       const yearNum = selectedYear.replace("Year ", "");
-
       try {
         const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
         const data = await response.json();
@@ -95,31 +93,12 @@ const Revenue: React.FC = () => {
         console.error("Error fetching sheet data:", error);
       }
     };
-
     fetchData();
   }, [selectedYear]);
 
-  const handleInputChange = async (
-    fieldName: string,
-    quarterIdx: number,
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const newValue = parseFloat(event.target.value) || 0;
+  // API call separated
+  const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
-    const quarterKey = getQuarterKey(selectedYear, quarterIdx);
-
-    setSheetData((prev) => ({
-      ...prev,
-      [fieldName]: {
-        ...prev[fieldName],
-        [quarterKey]: {
-          ...prev[fieldName]?.[quarterKey],
-          value: newValue,
-          is_calculated: false,
-        },
-      },
-    }));
-
     try {
       const response = await fetch("http://localhost:8000/api/update-cell", {
         method: "POST",
@@ -130,7 +109,7 @@ const Revenue: React.FC = () => {
           field_name: fieldName,
           year_num: yearNum,
           quarter_num: quarterIdx + 1,
-          value: newValue,
+          value: value,
         }),
       });
 
@@ -150,8 +129,6 @@ const Revenue: React.FC = () => {
 
   return (
     <div className="revenue">
-  
-
       <div className="table-wrapper">
         <div className="container mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
@@ -175,7 +152,7 @@ const Revenue: React.FC = () => {
 
                 {showDropdown && (
                   <div className="custom-dropdown">
-                    {["Year 1", "Year 2", "Year 3","year 4","year 5"].map((year, idx) => (
+                    {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
                       <div
                         key={idx}
                         className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
@@ -242,7 +219,29 @@ const Revenue: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              onChange={(e) => handleInputChange(metric.label, qIdx, e)}
+                              onChange={(e) => {
+                                const newValue = parseFloat(e.target.value) || 0;
+                                setSheetData((prev) => ({
+                                  ...prev,
+                                  [metric.label]: {
+                                    ...prev[metric.label],
+                                    [q.key]: {
+                                      ...prev[metric.label]?.[q.key],
+                                      value: newValue,
+                                      is_calculated: false,
+                                    },
+                                  },
+                                }));
+                              }}
+                              onBlur={(e) => {
+                                const newValue = parseFloat(e.target.value) || 0;
+                                updateCellAPI(metric.label, qIdx, newValue);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.currentTarget.blur(); // triggers onBlur → API call
+                                }
+                              }}
                             />
                           ) : (
                             <span>{value.toLocaleString("en-IN")}</span>
