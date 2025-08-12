@@ -27,7 +27,7 @@ const menu = [
   {
     section: 'Financials',
     items: [
-      { label: 'Cashflow statement', path: '/growth', icon: <IoMdTrendingUp /> },
+      { label: 'Cashflow statement', path: '/growth', icon: <GrMoney /> },
       { label: 'Profit and Loss statement', path: '/PnL-Statement', icon: <LuCircleDollarSign /> },
       { label: 'Valuation', path: '/valuation', icon: <LuWallet/> },
       { label: 'Unit Economics', path: '/unit-economics', icon: <LuCalculator /> },
@@ -45,7 +45,7 @@ const menu = [
     section: 'Revenue & Expenses',
     items: [
       
-      { label: 'Growth Funnel', path: '/growth', icon: <GrMoney /> },
+      { label: 'Growth Funnel', path: '/growth', icon:<IoMdTrendingUp />  },
        { label: 'OpEx', path: '/opex', icon: <FiCpu /> },
       { label: 'Salaries', path: '/salaries', icon: <HiOutlineUserGroup /> },
       { label: 'CapEx', path: '/capex', icon: <AiOutlineBank /> },
