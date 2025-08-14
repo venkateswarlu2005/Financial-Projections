@@ -24,10 +24,17 @@ ChartJS.register(
   Legend
 );
 
-export default function Dashboard() {
+interface DashboardProps {
+  selectedYear: string;
+  sheetType: string;
+}
+
+export default function Dashboard({ selectedYear, sheetType }: DashboardProps) {
   const [growthData, setGrowthData] = useState<number[]>([]);
   const [totalUsers, setTotalUsers] = useState<number>(0);
-  const [dpData, setDpData] = useState<number[]>([]); // <-- NEW state
+  const [dpData, setDpData] = useState<number[]>([]);
+  const [revenueData, setRevenueData] = useState<number[]>([]);
+  const [sheetData, setSheetData] = useState<any>({});
 
   // --- Fetch Growth Funnel ---
   useEffect(() => {
@@ -64,7 +71,7 @@ export default function Dashboard() {
           const quarters = Object.keys(dpValuationRow).sort();
           const values = quarters.map(q => dpValuationRow[q]?.value ?? 0);
 
-          setDpData(values); // <-- store for chart
+          setDpData(values);
         }
       } catch (err) {
         console.error("Error fetching dp-evaluation data:", err);
@@ -73,6 +80,31 @@ export default function Dashboard() {
 
     fetchDPData();
   }, []);
+
+  // --- Fetch Revenue Data from selectedYear / sheetType ---
+  useEffect(() => {
+    const fetchData = async () => {
+      const yearNum = selectedYear.replace("Year ", "");
+      try {
+        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> = await response.json();
+
+        // Extract Total Revenue
+        const totalRevenueRow = apiData["Total Revenue"];
+        if (totalRevenueRow) {
+          const quarters = Object.keys(totalRevenueRow).sort();
+          const values = quarters.map(q => totalRevenueRow[q]?.value ?? 0);
+          setRevenueData(values);
+        }
+
+        setSheetData(apiData);
+      } catch (error) {
+        console.error("Error fetching sheet data:", error);
+      }
+    };
+
+    fetchData();
+  }, [selectedYear, sheetType]);
 
   const formatNumber = (num: number) =>
     num?.toLocaleString("en-IN", { maximumFractionDigits: 0 });
@@ -102,6 +134,20 @@ export default function Dashboard() {
     ]
   };
 
+  const revenueChartData = {
+    labels: revenueData.map((_, idx) => `Q${idx + 1}`),
+    datasets: [
+      {
+        label: "Total Revenue",
+        data: revenueData,
+        borderColor: "#22c55e",
+        backgroundColor: "rgba(34, 197, 94, 0.3)",
+        fill: true,
+        tension: 0.3
+      }
+    ]
+  };
+
   const dummyChartData = {
     labels: [],
     datasets: [
@@ -125,8 +171,27 @@ export default function Dashboard() {
 
       {/* Charts */}
       <div className="charts-grid">
-        <ChartCard title="Revenue Projections" value={`NAN`} subText="">
-          <Line data={dummyChartData} />
+        <ChartCard
+          title="Revenue Projections"
+          value={formatNumber(revenueData[revenueData.length - 1] || 0)}
+          subText=""
+        >
+          <Line
+            data={revenueChartData}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: true } },
+              scales: {
+                y: {
+                  ticks: {
+                    callback: (value) =>
+                      (value as number).toLocaleString("en-IN")
+                  }
+                }
+              }
+            }}
+          />
         </ChartCard>
 
         <ChartCard title="Revenue Diversification" value="" subText="">
