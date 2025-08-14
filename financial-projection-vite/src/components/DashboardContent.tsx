@@ -27,7 +27,9 @@ ChartJS.register(
 export default function Dashboard() {
   const [growthData, setGrowthData] = useState<number[]>([]);
   const [totalUsers, setTotalUsers] = useState<number>(0);
+  const [dpData, setDpData] = useState<number[]>([]); // <-- NEW state
 
+  // --- Fetch Growth Funnel ---
   useEffect(() => {
     const fetchGrowthData = async () => {
       try {
@@ -36,12 +38,11 @@ export default function Dashboard() {
 
         const totalNetUsersRow = apiData["Total Net Users"];
         if (totalNetUsersRow) {
-          // Sort quarters so they're always in order (Y1Q1 → Y1Q4)
           const quarters = Object.keys(totalNetUsersRow).sort();
           const values = quarters.map(q => totalNetUsersRow[q]?.value ?? 0);
 
           setGrowthData(values);
-          setTotalUsers(values[values.length - 1] || 0);
+          setTotalUsers(values[values.length - 4] || 0);
         }
       } catch (err) {
         console.error("Error fetching growth funnel data:", err);
@@ -49,6 +50,28 @@ export default function Dashboard() {
     };
 
     fetchGrowthData();
+  }, []);
+
+  // --- Fetch DP Evaluation ---
+  useEffect(() => {
+    const fetchDPData = async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/api/sheet-data/dp-evaluation/1`);
+        const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> = await res.json();
+
+        const dpValuationRow = apiData["DP Valuation"];
+        if (dpValuationRow) {
+          const quarters = Object.keys(dpValuationRow).sort();
+          const values = quarters.map(q => dpValuationRow[q]?.value ?? 0);
+
+          setDpData(values); // <-- store for chart
+        }
+      } catch (err) {
+        console.error("Error fetching dp-evaluation data:", err);
+      }
+    };
+
+    fetchDPData();
   }, []);
 
   const formatNumber = (num: number) =>
@@ -62,6 +85,19 @@ export default function Dashboard() {
         label: "Total Customers",
         data: growthData,
         backgroundColor: "#f97316"
+      }
+    ]
+  };
+
+  const dpChartData = {
+    labels: dpData.map((_, idx) => `Q${idx + 1}`),
+    datasets: [
+      {
+        label: "DP Valuation",
+        data: dpData,
+        borderColor: "#2563eb",
+        backgroundColor: "rgba(37, 99, 235, 0.3)",
+        fill: true
       }
     ]
   };
@@ -109,7 +145,10 @@ export default function Dashboard() {
         </ChartCard>
 
         <ChartCard title="DP-Evaluation" value={`NAN`} subText="">
-          <Bar data={dummyChartData} />
+          <Line
+            data={dpChartData}
+            options={{ responsive: true, maintainAspectRatio: false }}
+          />
         </ChartCard>
       </div>
     </div>
