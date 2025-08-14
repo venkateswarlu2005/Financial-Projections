@@ -81,7 +81,7 @@ export default function Dashboard({ selectedYear, sheetType }: DashboardProps) {
     fetchDPData();
   }, []);
 
-  // --- Fetch Revenue Data from selectedYear / sheetType ---
+  // --- Fetch Revenue Data from selectedYear / sheetType --
   useEffect(() => {
     const fetchData = async () => {
       const yearNum = selectedYear.replace("Year ", "");
