@@ -1,269 +1,252 @@
-import React, { useState, useRef, useEffect } from "react";
-import "./Revenue.css";
-import { BsInfoCircleFill } from "react-icons/bs";
+import React, { useEffect, useState } from "react";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend
+} from "chart.js";
+import { Line, Bar, Doughnut } from "react-chartjs-2";
+import "./Dashboard.css";
 
-const quarters = ["Q1", "Q2", "Q3", "Q4"];
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend
+);
 
-const metricItems = [
-  { label: "Average Brokerage Per User Per Trade", type: "input" },
-  { label: "Average No of Trades Per Day Per User", type: "input" },
-  { label: "Active Trading Users", type: "auto" },
-  { label: "Brokerage Revenue", type: "auto", addGapAfter: true },
-  { label: "Average AUM per Active User (₹)", type: "input" },
-  { label: "Average Active PMS Users", type: "auto" },
-  { label: "Management Fee from PMS", type: "input" },
-  { label: "PMS Revenue", type: "auto", addGapAfter: true },
-  { label: "AI Subscription Revenue Per User (₹)", type: "input" },
-  { label: "Average Active Subscription Users", type: "auto" },
-  { label: "Revenue from Subscriptions", type: "auto", addGapAfter: true },
-  { label: "Average Monthly AUM MF", type: "input" },
-  { label: "Average Monthly Revenue", type: "auto", addGapAfter: true },
-  { label: "Average Ideal Broking Funds", type: "auto" },
-  { label: "Revenue from Broking Interest", type: "auto", addGapAfter: true },
-  { label: "Average Market Investment", type: "input" },
-  { label: "Average Revenue from Investments", type: "auto" },
-  { label: "Average no of user per month FPI", type: "input" },
-  { label: "Average Brokerage Per User", type: "input", addGapAfter: true },
-  { label: "Average Trade Per User", type: "input" },
-  { label: "Average AUM per User (₹)", type: "input" },
-  { label: "Revenue from FPI", type: "auto", addGapAfter: true },
-  { label: "Relationship Management Variable Pay Average", type: "input" },
-  { label: "Average AUM from RMs", type: "auto" },
-  { label: "Revenue from AUMs", type: "auto", addGapAfter: true },
-  { label: "Embedded Financial Service", type: "input" },
-  { label: "Digi Banking - CASA Interest", type: "auto" },
-  { label: "Digi Banking - Cards Income", type: "auto", addGapAfter: true },
-  { label: "Digi Insurance - Premium Average", type: "input" },
-  { label: "Insurance Premium Margin", type: "input" },
-  { label: "Net Insurance Income", type: "auto", addGapAfter: true },
-  { label: "Cross Border Payments and Investment Average Amount", type: "input" },
-  { label: "Average Payment Gateway Transactions", type: "input" },
-  { label: "Fee Per Transaction", type: "input", addGapAfter: true },
-  { label: "Total Revenue", type: "auto" },
-  { label: "Average Revenue Per User", type: "auto" },
-];
+interface DashboardProps {
+  selectedYear: string;
+  sheetType: string;
+}
 
-const Revenue: React.FC = () => {
-  const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
-  const [selectedYear, setSelectedYear] = useState("Year 1");
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+export default function Dashboard({ selectedYear, sheetType }: DashboardProps) {
+  const [growthData, setGrowthData] = useState<number[]>([]);
+  const [totalUsers, setTotalUsers] = useState<number>(0);
+  const [dpData, setDpData] = useState<number[]>([]);
+  const [revenueData, setRevenueData] = useState<number[]>([]);
 
-  const [sheetData, setSheetData] = useState<
-    Record<string, Record<string, { value: number; is_calculated: boolean }>>
-  >({});
-
-  const sheetType = "revenue";
-
-  const getQuarterKey = (year: string, quarterIdx: number) =>
-    `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
-
-  const getDisplayedQuarters = () => {
-    if (viewMode === "quarter") {
-      return quarters.map((q, i) => ({
-        label: q,
-        key: getQuarterKey(selectedYear, i),
-      }));
-    } else {
-      return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((_year, i) => ({
-        label: `Y${i + 1}`,
-        key: `Y${i + 1}Q4`,
-      }));
-    }
-  };
-
+  // --- Fetch Growth Funnel ---
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
+    const fetchGrowthData = async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/api/sheet-data/growth-funnel/1`);
+        const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> = await res.json();
+
+        const totalNetUsersRow = apiData["Total Net Users"];
+        if (totalNetUsersRow) {
+          const quarters = Object.keys(totalNetUsersRow).sort();
+          const values = quarters.map(q => totalNetUsersRow[q]?.value ?? 0);
+
+          setGrowthData(values);
+          setTotalUsers(values[values.length - 1] || 0);
+        }
+      } catch (err) {
+        console.error("Error fetching growth funnel data:", err);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    fetchGrowthData();
   }, []);
 
+  // --- Fetch DP Evaluation ---
   useEffect(() => {
-    const fetchData = async () => {
-      const yearNum = selectedYear.replace("Year ", "");
+    const fetchDPData = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const data = await response.json();
-        setSheetData(data);
-      } catch (error) {
-        console.error("Error fetching sheet data:", error);
+        const res = await fetch(`http://localhost:8000/api/sheet-data/dp-evaluation/1`);
+        const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> = await res.json();
+
+        const dpValuationRow = apiData["DP Valuation"];
+        if (dpValuationRow) {
+          const quarters = Object.keys(dpValuationRow).sort();
+          const values = quarters.map(q => dpValuationRow[q]?.value ?? 0);
+
+          setDpData(values);
+        }
+      } catch (err) {
+        console.error("Error fetching dp-evaluation data:", err);
       }
     };
-    fetchData();
+
+    fetchDPData();
+  }, []);
+
+  // --- Fetch Total Revenue for chart ---
+  useEffect(() => {
+    const fetchRevenueData = async () => {
+      const yearNum = selectedYear.replace("Year ", "");
+      try {
+        const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/${yearNum}`);
+        const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> = await res.json();
+
+        const totalRevenueRow = apiData["Total Revenue"];
+        if (totalRevenueRow) {
+          const quarters = Object.keys(totalRevenueRow).sort();
+          const values = quarters.map(q => totalRevenueRow[q]?.value ?? 0);
+          setRevenueData(values);
+        }
+      } catch (err) {
+        console.error("Error fetching revenue data:", err);
+      }
+    };
+
+    fetchRevenueData();
   }, [selectedYear]);
 
-  // API call separated
-  const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
-    const yearNum = parseInt(selectedYear.replace("Year ", ""));
-    try {
-      const response = await fetch("http://localhost:8000/api/update-cell", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          company_id: 1,
-          sheet_type: sheetType,
-          field_name: fieldName,
-          year_num: yearNum,
-          quarter_num: quarterIdx + 1,
-          value: value,
-        }),
-      });
+  const formatNumber = (num: number) =>
+    num?.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
-      const result = await response.json();
-
-      if (response.ok && result.status === "success") {
-        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const updatedData = await updated.json();
-        setSheetData(updatedData);
-      } else {
-        console.error("Error updating cell:", result.message);
+  // Chart Data
+  const growthChartData = {
+    labels: growthData.map((_, idx) => `Q${idx + 1}`),
+    datasets: [
+      {
+        label: "Total Customers",
+        data: growthData,
+        backgroundColor: "#f97316"
       }
-    } catch (error) {
-      console.error("Update error:", error);
-    }
+    ]
+  };
+
+  const dpChartData = {
+    labels: dpData.map((_, idx) => `Q${idx + 1}`),
+    datasets: [
+      {
+        label: "DP Valuation",
+        data: dpData,
+        borderColor: "#2563eb",
+        backgroundColor: "rgba(37, 99, 235, 0.3)",
+        fill: true
+      }
+    ]
+  };
+
+  const revenueChartData = {
+    labels: revenueData.map((_, idx) => `Q${idx + 1}`),
+    datasets: [
+      {
+        label: "Total Revenue",
+        data: revenueData,
+        borderColor: "#22c55e",
+        backgroundColor: "rgba(34, 197, 94, 0.3)",
+        fill: true,
+        tension: 0.3
+      }
+    ]
+  };
+
+  const dummyChartData = {
+    labels: [],
+    datasets: [
+      {
+        data: [],
+        backgroundColor: []
+      }
+    ]
   };
 
   return (
-    <div className="revenue">
-      <div className="table-wrapper">
-        <div className="container mt-4">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h5>
-              Revenue Streams & Income{" "}
-              <span className="info-icon"><BsInfoCircleFill /></span>
-            </h5>
+    <div className="dashboard">
+      {/* Summary Cards */}
+      <div className="summary-cards">
+        <Card title="Book Value per Share" value={`NAN`} />
+        <Card title="Total Users" value={formatNumber(totalUsers)} />
+        <Card title="LTV / CAC Ratio" value={`NAN`} />
+        <Card title="Monthly churn Rate" value={`NAN`} />
+        <Card title="Closed Round" value={`NAN`} />
+      </div>
 
-            <div className="d-flex gap-2 btn-group-pill-toggle">
-              <div className="position-relative" ref={dropdownRef}>
-                <button
-                  className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
-                  onClick={() => {
-                    setViewMode("quarter");
-                    setShowDropdown((prev) => !prev);
-                  }}
-                >
-                  <span className="circle-indicator" />
-                  <span className="pill-label">Quarter Wise</span>
-                </button>
+      {/* Charts */}
+      <div className="charts-grid">
+        <ChartCard
+          title="Revenue Projections"
+          value={formatNumber(revenueData[revenueData.length - 1] || 0)}
+          subText=""
+        >
+          <Line
+            data={revenueChartData}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: true } },
+              scales: {
+                y: {
+                  ticks: {
+                    callback: (value) =>
+                      (value as number).toLocaleString("en-IN")
+                  }
+                }
+              }
+            }}
+          />
+        </ChartCard>
 
-                {showDropdown && (
-                  <div className="custom-dropdown">
-                    {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
-                      <div
-                        key={idx}
-                        className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
-                        onClick={() => {
-                          setSelectedYear(year);
-                          setShowDropdown(false);
-                        }}
-                      >
-                        <span className={`radio-circle ${selectedYear === year ? "filled" : ""}`} />
-                        {year}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+        <ChartCard title="Revenue Diversification" value="" subText="">
+          <Doughnut data={dummyChartData} />
+        </ChartCard>
 
-              <button
-                className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
-                onClick={() => {
-                  setViewMode("year");
-                  setShowDropdown(false);
-                }}
-              >
-                <span className="circle-indicator" />
-                <span className="pill-label">Year Wise</span>
-              </button>
+        <ChartCard
+          title="Customer Growth"
+          value={formatNumber(totalUsers)}
+          subText=""
+        >
+          <Bar
+            data={growthChartData}
+            options={{ responsive: true, maintainAspectRatio: false }}
+          />
+        </ChartCard>
 
-              <button className="pill-toggle-btn no-dot">
-                <span className="pill-label">Download</span>
-              </button>
-            </div>
-          </div>
-
-          <table className="table table-borderless table-hover revenue-table">
-            <thead>
-              <tr>
-                <th className="metrics-header">Metrics</th>
-                {getDisplayedQuarters().map((q, i) => (
-                  <th key={i} className="quarter-header">{q.label}</th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {metricItems.map((metric, idx) => (
-                <React.Fragment key={idx}>
-                  <tr className="align-middle">
-                    <td>
-                      <div className="mb-1">{metric.label}</div>
-                      <div className="text-muted" style={{ fontSize: "12px" }}>
-                        {metric.type === "input" ? "Input" : "Auto"}
-                      </div>
-                    </td>
-
-                    {getDisplayedQuarters().map((q, qIdx) => {
-                      const metricData = sheetData?.[metric.label]?.[q.key];
-                      const value = metricData?.value ?? 0;
-                      const isCalculated = metricData?.is_calculated ?? false;
-
-                      return (
-                        <td key={qIdx}>
-                          {metric.type === "input" && !isCalculated && viewMode === "quarter" ? (
-                            <input
-                              type="number"
-                              className="form-control form-control-sm"
-                              value={value}
-                              onChange={(e) => {
-                                const newValue = parseFloat(e.target.value) || 0;
-                                setSheetData((prev) => ({
-                                  ...prev,
-                                  [metric.label]: {
-                                    ...prev[metric.label],
-                                    [q.key]: {
-                                      ...prev[metric.label]?.[q.key],
-                                      value: newValue,
-                                      is_calculated: false,
-                                    },
-                                  },
-                                }));
-                              }}
-                              onBlur={(e) => {
-                                const newValue = parseFloat(e.target.value) || 0;
-                                updateCellAPI(metric.label, qIdx, newValue);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.currentTarget.blur(); // triggers onBlur → API call
-                                }
-                              }}
-                            />
-                          ) : (
-                            <span>{value.toLocaleString("en-IN")}</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-
-                  {metric.addGapAfter && (
-                    <tr className="gap-row">
-                      <td colSpan={quarters.length + 1}></td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ChartCard title="DP-Evaluation" value={`NAN`} subText="">
+          <Line
+            data={dpChartData}
+            options={{ responsive: true, maintainAspectRatio: false }}
+          />
+        </ChartCard>
       </div>
     </div>
   );
-};
+}
 
-export default Revenue;
+// ===== Reusable Components =====
+interface CardProps {
+  title: string;
+  value: string | number;
+}
+
+function Card({ title, value }: CardProps) {
+  return (
+    <div className="summary-card">
+      <div className="card-title">{title}</div>
+      <div className="card-value">{value}</div>
+    </div>
+  );
+}
+
+interface ChartCardProps {
+  title: string;
+  value: string | number;
+  subText: string;
+  children: React.ReactNode;
+}
+
+function ChartCard({ title, value, subText, children }: ChartCardProps) {
+  return (
+    <div className="chart-card">
+      <div className="chart-header">
+        <div className="chart-title">{title}</div>
+        <div className="chart-value">{value}</div>
+        <div className="chart-subtext">{subText}</div>
+      </div>
+      <div className="chart-body">{children}</div>
+    </div>
+  );
+}
