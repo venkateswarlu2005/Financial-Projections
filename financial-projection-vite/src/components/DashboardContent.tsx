@@ -86,7 +86,7 @@ export default function Dashboard({ selectedYear, sheetType }: DashboardProps) {
     const fetchData = async () => {
       const yearNum = selectedYear.replace("Year ", "");
       try {
-        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const response = await fetch(`http://localhost:8000/api/sheet-data/${"revenue"}/${"1"}`);
         const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> = await response.json();
 
         // Extract Total Revenue
