@@ -48,6 +48,7 @@ const Revenue: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [stressTestingActive, setStressTestingActive] = useState(false);
 
   const [sheetData, setSheetData] = useState<
     Record<string, Record<string, { value: number; is_calculated: boolean }>>
@@ -86,18 +87,33 @@ const Revenue: React.FC = () => {
     const fetchData = async () => {
       const yearNum = selectedYear.replace("Year ", "");
       try {
-        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const data = await response.json();
-        setSheetData(data);
+        if (stressTestingActive) {
+          // Fetch from stress-test endpoint
+          const response = await fetch("http://localhost:8000/api/stress-test");
+          const data = await response.json();
+
+          if (data && data[sheetType]) {
+            setSheetData(data[sheetType]);
+          } else {
+            console.error(`No data found for sheet type: ${sheetType}`);
+          }
+        } else {
+          // Normal mode fetch
+          const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+          const data = await response.json();
+          setSheetData(data);
+        }
       } catch (error) {
         console.error("Error fetching sheet data:", error);
       }
     };
     fetchData();
-  }, [selectedYear]);
+  }, [selectedYear, stressTestingActive]);
 
-  // API call separated
+  // API call to update data (disabled in stress testing mode)
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
+    if (stressTestingActive) return; // Prevent updates in stress mode
+
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
       const response = await fetch("http://localhost:8000/api/update-cell", {
@@ -138,6 +154,14 @@ const Revenue: React.FC = () => {
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
+              <button
+                className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
+                onClick={() => setStressTestingActive(prev => !prev)}
+              >
+                <span className="circle-indicator" />
+                <span className="pill-label">Stress Testing</span>
+              </button>
+
               <div className="position-relative" ref={dropdownRef}>
                 <button
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
@@ -216,33 +240,39 @@ const Revenue: React.FC = () => {
                         <td key={qIdx}>
                           {metric.type === "input" && !isCalculated && viewMode === "quarter" ? (
                             <input
-                              type="number"
-                              className="form-control form-control-sm"
-                              value={value}
-                              onChange={(e) => {
-                                const newValue = parseFloat(e.target.value) || 0;
-                                setSheetData((prev) => ({
-                                  ...prev,
-                                  [metric.label]: {
-                                    ...prev[metric.label],
-                                    [q.key]: {
-                                      ...prev[metric.label]?.[q.key],
-                                      value: newValue,
-                                      is_calculated: false,
-                                    },
-                                  },
-                                }));
-                              }}
-                              onBlur={(e) => {
-                                const newValue = parseFloat(e.target.value) || 0;
-                                updateCellAPI(metric.label, qIdx, newValue);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.currentTarget.blur(); // triggers onBlur → API call
-                                }
-                              }}
-                            />
+                             type="number"
+                             className="form-control form-control-sm"
+                             value={value}
+                             readOnly={stressTestingActive} // Completely prevent typing
+                             style={stressTestingActive ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                             onChange={(e) => {
+                               if (stressTestingActive) return; // ignore changes
+                               const newValue = parseFloat(e.target.value) || 0;
+                               setSheetData((prev) => ({
+                                 ...prev,
+                                 [metric.label]: {
+                                   ...prev[metric.label],
+                                   [q.key]: {
+                                     ...prev[metric.label]?.[q.key],
+                                     value: newValue,
+                                     is_calculated: false,
+                                   },
+                                 },
+                               }));
+                             }}
+                             onBlur={(e) => {
+                                                          if (stressTestingActive) return;
+                               const newValue = parseFloat(e.target.value) || 0;
+                               updateCellAPI(metric.label, qIdx, newValue);
+                             }}
+                             onKeyDown={(e) => {
+                               if (stressTestingActive) return;
+                               if (e.key === "Enter") {
+                                 e.currentTarget.blur();
+                               }
+                             }}
+                           />
+                           
                           ) : (
                             <span>{value.toLocaleString("en-IN")}</span>
                           )}
