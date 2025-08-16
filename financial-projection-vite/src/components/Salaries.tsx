@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { BsInfoCircleFill } from "react-icons/bs";
-import "./Revenue.css"; // Reuse the same styles
+import "./Revenue.css";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
+const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 
 const Metrics = [
   { name: "Core Management Count", type: "input" },
@@ -92,6 +93,7 @@ const Salaries: React.FC = () => {
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [stressTestingActive, setStressTestingActive] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [sheetData, setSheetData] = useState<
@@ -103,14 +105,14 @@ const Salaries: React.FC = () => {
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
 
-  const getDisplayedQuarters = () => {
+  const getDisplayedPeriods = () => {
     if (viewMode === "quarter") {
       return quarters.map((q, i) => ({
         label: q,
         key: getQuarterKey(selectedYear, i),
       }));
     } else {
-      return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((_year, i) => ({
+      return years.map((_year, i) => ({
         label: `Y${i + 1}`,
         key: `Y${i + 1}Q4`,
       }));
@@ -131,37 +133,31 @@ const Salaries: React.FC = () => {
     const fetchData = async () => {
       const yearNum = selectedYear.replace("Year ", "");
       try {
-        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const endpoint = stressTestingActive
+          ? "http://localhost:8000/api/stress-test"
+          : `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`;
+
+        const response = await fetch(endpoint);
         const data = await response.json();
-        setSheetData(data);
+
+        if (data && data[sheetType]) {
+          setSheetData(data[sheetType]);
+        } else if (!stressTestingActive) {
+          setSheetData(data);
+        } else {
+          console.error("No data found for sheet type:", sheetType);
+        }
       } catch (error) {
         console.error("Error fetching sheet data:", error);
       }
     };
     fetchData();
-  }, [selectedYear]);
+  }, [selectedYear, stressTestingActive]);
 
-  const handleInputChange = async (
-    fieldName: string,
-    quarterIdx: number,
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const newValue = parseFloat(event.target.value) || 0;
+  const updateCellAPI = async (fieldName: string, periodIdx: number, value: number) => {
+    if (stressTestingActive) return; // Prevent updates in stress mode
+
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
-    const quarterKey = getQuarterKey(selectedYear, quarterIdx);
-
-    setSheetData((prev) => ({
-      ...prev,
-      [fieldName]: {
-        ...prev[fieldName],
-        [quarterKey]: {
-          ...prev[fieldName]?.[quarterKey],
-          value: newValue,
-          is_calculated: false,
-        },
-      },
-    }));
-
     try {
       const response = await fetch("http://localhost:8000/api/update-cell", {
         method: "POST",
@@ -171,8 +167,8 @@ const Salaries: React.FC = () => {
           sheet_type: sheetType,
           field_name: fieldName,
           year_num: yearNum,
-          quarter_num: quarterIdx + 1,
-          value: newValue,
+          quarter_num: periodIdx + 1,
+          value: value,
         }),
       });
 
@@ -192,8 +188,6 @@ const Salaries: React.FC = () => {
 
   return (
     <div className="revenue">
-      
-
       <div className="table-wrapper">
         <div className="container mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
@@ -202,12 +196,20 @@ const Salaries: React.FC = () => {
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
+              <button
+                className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
+                onClick={() => setStressTestingActive(prev => !prev)}
+              >
+                <span className="circle-indicator" />
+                <span className="pill-label">Stress Testing</span>
+              </button>
+
               <div className="position-relative" ref={dropdownRef}>
                 <button
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
                   onClick={() => {
                     setViewMode("quarter");
-                    setShowDropdown((prev) => !prev);
+                    setShowDropdown(prev => !prev);
                   }}
                 >
                   <span className="circle-indicator" />
@@ -216,9 +218,9 @@ const Salaries: React.FC = () => {
 
                 {showDropdown && (
                   <div className="custom-dropdown">
-                    {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
+                    {years.map(year => (
                       <div
-                        key={idx}
+                        key={year}
                         className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
                         onClick={() => {
                           setSelectedYear(year);
@@ -254,8 +256,8 @@ const Salaries: React.FC = () => {
             <thead>
               <tr>
                 <th className="metrics-header">Metrics</th>
-                {getDisplayedQuarters().map((q, i) => (
-                  <th key={i} className="quarter-header">{q.label}</th>
+                {getDisplayedPeriods().map((p, i) => (
+                  <th key={i} className="quarter-header">{p.label}</th>
                 ))}
               </tr>
             </thead>
@@ -269,19 +271,44 @@ const Salaries: React.FC = () => {
                         {metric.type === "input" ? "Input" : "Auto"}
                       </div>
                     </td>
-                    {getDisplayedQuarters().map((q, qIdx) => {
-                      const metricData = sheetData?.[metric.name]?.[q.key];
+                    {getDisplayedPeriods().map((p, pIdx) => {
+                      const metricData = sheetData?.[metric.name]?.[p.key];
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
 
                       return (
-                        <td key={qIdx}>
+                        <td key={pIdx}>
                           {metric.type === "input" && !isCalculated && viewMode === "quarter" ? (
                             <input
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              onChange={(e) => handleInputChange(metric.name, qIdx, e)}
+                              readOnly={stressTestingActive}
+                              style={stressTestingActive ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              onChange={(e) => {
+                                if (stressTestingActive) return;
+                                const newValue = parseFloat(e.target.value) || 0;
+                                setSheetData(prev => ({
+                                  ...prev,
+                                  [metric.name]: {
+                                    ...prev[metric.name],
+                                    [p.key]: {
+                                      ...prev[metric.name]?.[p.key],
+                                      value: newValue,
+                                      is_calculated: false,
+                                    }
+                                  }
+                                }));
+                              }}
+                              onBlur={(e) => {
+                                if (stressTestingActive) return;
+                                const newValue = parseFloat(e.target.value) || 0;
+                                updateCellAPI(metric.name, pIdx, newValue);
+                              }}
+                              onKeyDown={(e) => {
+                                if (stressTestingActive) return;
+                                if (e.key === "Enter") e.currentTarget.blur();
+                              }}
                             />
                           ) : (
                             <span>{value.toLocaleString("en-IN")}</span>
@@ -290,6 +317,7 @@ const Salaries: React.FC = () => {
                       );
                     })}
                   </tr>
+
                   {metric.addGapAfter && (
                     <tr className="gap-row">
                       <td colSpan={quarters.length + 1}></td>

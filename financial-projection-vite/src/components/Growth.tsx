@@ -45,6 +45,7 @@ const Growth: React.FC = () => {
   >({});
 
   const [loadingAI, setLoadingAI] = useState(false);
+  const [stressTestingActive, setStressTestingActive] = useState(false);
 
   const sheetType = "growth-funnel";
 
@@ -79,9 +80,17 @@ const Growth: React.FC = () => {
   const fetchSheetData = async () => {
     const yearNum = selectedYear.replace("Year ", "");
     try {
-      const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-      const data = await response.json();
-      setSheetData(data);
+      if (stressTestingActive) {
+        const response = await fetch("http://localhost:8000/api/stress-test");
+        const data = await response.json();
+        if (data && data[sheetType]) {
+          setSheetData(data[sheetType]);
+        }
+      } else {
+        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const data = await response.json();
+        setSheetData(data);
+      }
     } catch (error) {
       console.error("Error fetching sheet data:", error);
     }
@@ -89,29 +98,13 @@ const Growth: React.FC = () => {
 
   useEffect(() => {
     fetchSheetData();
-  }, [selectedYear]);
+  }, [selectedYear, stressTestingActive]);
 
-  const handleInputChange = async (
-    fieldName: string,
-    quarterIdx: number,
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const newValue = parseFloat(event.target.value) || 0;
+  // Update only on blur or Enter
+  const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
+    if (stressTestingActive) return; // Prevent updates in stress mode
+
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
-    const quarterKey = getQuarterKey(selectedYear, quarterIdx);
-
-    setSheetData((prev) => ({
-      ...prev,
-      [fieldName]: {
-        ...prev[fieldName],
-        [quarterKey]: {
-          ...prev[fieldName]?.[quarterKey],
-          value: newValue,
-          is_calculated: false,
-        },
-      },
-    }));
-
     try {
       const response = await fetch("http://localhost:8000/api/update-cell", {
         method: "POST",
@@ -122,7 +115,7 @@ const Growth: React.FC = () => {
           field_name: fieldName,
           year_num: yearNum,
           quarter_num: quarterIdx + 1,
-          value: newValue,
+          value: value,
         }),
       });
 
@@ -176,6 +169,15 @@ const Growth: React.FC = () => {
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
+              {/* Stress Testing Toggle */}
+              <button
+                className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
+                onClick={() => setStressTestingActive(prev => !prev)}
+              >
+                <span className="circle-indicator" />
+                <span className="pill-label">Stress Testing</span>
+              </button>
+
               <div className="position-relative" ref={dropdownRef}>
                 <button
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
@@ -268,7 +270,34 @@ const Growth: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              onChange={(e) => handleInputChange(metric.label, qIdx, e)}
+                              readOnly={stressTestingActive}
+                              style={stressTestingActive ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              onChange={(e) => {
+                                if (stressTestingActive) return;
+                                const newValue = parseFloat(e.target.value) || 0;
+                                setSheetData((prev) => ({
+                                  ...prev,
+                                  [metric.label]: {
+                                    ...prev[metric.label],
+                                    [q.key]: {
+                                      ...prev[metric.label]?.[q.key],
+                                      value: newValue,
+                                      is_calculated: false,
+                                    },
+                                  },
+                                }));
+                              }}
+                              onBlur={(e) => {
+                                if (stressTestingActive) return;
+                                const newValue = parseFloat(e.target.value) || 0;
+                                updateCellAPI(metric.label, qIdx, newValue);
+                              }}
+                              onKeyDown={(e) => {
+                                if (stressTestingActive) return;
+                                if (e.key === "Enter") {
+                                  e.currentTarget.blur();
+                                }
+                              }}
                             />
                           ) : (
                             <span>{value.toLocaleString("en-IN")}</span>

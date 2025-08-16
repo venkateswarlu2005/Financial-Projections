@@ -261,7 +261,7 @@ const Revenue: React.FC = () => {
                                }));
                              }}
                              onBlur={(e) => {
-                                                          if (stressTestingActive) return;
+                                if (stressTestingActive) return;
                                const newValue = parseFloat(e.target.value) || 0;
                                updateCellAPI(metric.label, qIdx, newValue);
                              }}

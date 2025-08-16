@@ -3,6 +3,7 @@ import "./Revenue.css"; // Reuse styles
 import { BsInfoCircleFill } from "react-icons/bs";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
+const yearsList = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 
 const metricItems = [
   { label: "CAC (Customer Acquisition Cost)", type: "auto" },
@@ -19,30 +20,20 @@ const UnitEconomics: React.FC = () => {
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [stressTestingActive, setStressTestingActive] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Now this will store all years' data at once
-  const [sheetData, setSheetData] = useState<
-    Record<string, Record<string, { value: number; is_calculated: boolean }>>
-  >({});
-
   const sheetType = "unit-economics";
+  const [sheetData, setSheetData] = useState<Record<string, Record<string, { value: number; is_calculated: boolean }>>>({});
 
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
 
   const getDisplayedQuarters = () => {
     if (viewMode === "quarter") {
-      return quarters.map((q, i) => ({
-        label: q,
-        key: getQuarterKey(selectedYear, i),
-      }));
-    } else {
-      return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, i) => ({
-        label: `Y${i + 1}`,
-        key: `Y${i + 1}Q4`, // Use Q4 as yearly total
-      }));
+      return quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }));
     }
+    return yearsList.map((year, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
   };
 
   // Close dropdown on outside click
@@ -56,49 +47,37 @@ const UnitEconomics: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch ALL years on mount
+  // Fetch data (all years or stress test)
   useEffect(() => {
-    const fetchAllYears = async () => {
-      let combined: Record<string, any> = {};
+    const fetchData = async () => {
       try {
-        for (let y = 1; y <= 5; y++) {
-          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${y}`);
+        if (stressTestingActive) {
+          const res = await fetch("http://localhost:8000/api/stress-test");
           const data = await res.json();
-          for (const metric in data) {
-            combined[metric] = { ...(combined[metric] || {}), ...data[metric] };
+          if (data && data[sheetType]) setSheetData(data[sheetType]);
+        } else {
+          let combined: Record<string, any> = {};
+          for (let y = 1; y <= 5; y++) {
+            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${y}`);
+            const data = await res.json();
+            for (const metric in data) {
+              combined[metric] = { ...(combined[metric] || {}), ...data[metric] };
+            }
           }
+          setSheetData(combined);
         }
-        setSheetData(combined);
-      } catch (error) {
-        console.error("Error fetching sheet data:", error);
+      } catch (err) {
+        console.error("Error fetching unit economics data:", err);
       }
     };
-    fetchAllYears();
-  }, []);
+    fetchData();
+  }, [stressTestingActive]);
 
-  const handleInputChange = async (
-    fieldName: string,
-    quarterIdx: number,
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const newValue = parseFloat(event.target.value) || 0;
+  const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
+    if (stressTestingActive) return;
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
-    const quarterKey = getQuarterKey(selectedYear, quarterIdx);
-
-    setSheetData((prev) => ({
-      ...prev,
-      [fieldName]: {
-        ...prev[fieldName],
-        [quarterKey]: {
-          ...prev[fieldName]?.[quarterKey],
-          value: newValue,
-          is_calculated: false,
-        },
-      },
-    }));
-
     try {
-      const response = await fetch("http://localhost:8000/api/update-cell", {
+      const res = await fetch("http://localhost:8000/api/update-cell", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -107,18 +86,14 @@ const UnitEconomics: React.FC = () => {
           field_name: fieldName,
           year_num: yearNum,
           quarter_num: quarterIdx + 1,
-          value: newValue,
+          value: value,
         }),
       });
-        
-      const result = await response.json();
-
-      if (response.ok && result.status === "success") {
-        // Re-fetch this year's data & merge into state
+      const result = await res.json();
+      if (res.ok && result.status === "success") {
         const updatedRes = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
         const updatedData = await updatedRes.json();
-        
-        setSheetData((prev) => {
+        setSheetData(prev => {
           const newData = { ...prev };
           for (const metric in updatedData) {
             newData[metric] = { ...(newData[metric] || {}), ...updatedData[metric] };
@@ -128,12 +103,10 @@ const UnitEconomics: React.FC = () => {
       } else {
         console.error("Error updating cell:", result.message);
       }
-    } catch (error) {
-      console.error("Update error:", error);
+    } catch (err) {
+      console.error("Update error:", err);
     }
   };
-  
-
 
   return (
     <div className="revenue">
@@ -141,17 +114,24 @@ const UnitEconomics: React.FC = () => {
         <div className="container mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
-              Unit Economics Metrics{" "}
-              <span className="info-icon"><BsInfoCircleFill /></span>
+              Unit Economics Metrics <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
+              <button
+                className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
+                onClick={() => setStressTestingActive(prev => !prev)}
+              >
+                <span className="circle-indicator" />
+                <span className="pill-label">Stress Testing</span>
+              </button>
+
               <div className="position-relative" ref={dropdownRef}>
                 <button
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
                   onClick={() => {
                     setViewMode("quarter");
-                    setShowDropdown((prev) => !prev);
+                    setShowDropdown(prev => !prev);
                   }}
                 >
                   <span className="circle-indicator" />
@@ -160,7 +140,7 @@ const UnitEconomics: React.FC = () => {
 
                 {showDropdown && (
                   <div className="custom-dropdown">
-                    {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
+                    {yearsList.map((year, idx) => (
                       <div
                         key={idx}
                         className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
@@ -227,7 +207,32 @@ const UnitEconomics: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              onChange={(e) => handleInputChange(metric.label, qIdx, e)}
+                              readOnly={stressTestingActive}
+                              style={stressTestingActive ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              onChange={(e) => {
+                                if (stressTestingActive) return;
+                                const newValue = parseFloat(e.target.value) || 0;
+                                setSheetData(prev => ({
+                                  ...prev,
+                                  [metric.label]: {
+                                    ...prev[metric.label],
+                                    [q.key]: {
+                                      ...prev[metric.label]?.[q.key],
+                                      value: newValue,
+                                      is_calculated: false,
+                                    },
+                                  },
+                                }));
+                              }}
+                              onBlur={(e) => {
+                                if (stressTestingActive) return;
+                                const newValue = parseFloat(e.target.value) || 0;
+                                updateCellAPI(metric.label, qIdx, newValue);
+                              }}
+                              onKeyDown={(e) => {
+                                if (stressTestingActive) return;
+                                if (e.key === "Enter") e.currentTarget.blur();
+                              }}
                             />
                           ) : (
                             <span>{value.toLocaleString("en-IN")}</span>

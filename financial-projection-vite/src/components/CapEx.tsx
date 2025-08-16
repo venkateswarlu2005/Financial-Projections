@@ -18,6 +18,7 @@ const CapEx: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [stressTestingActive, setStressTestingActive] = useState(false);
 
   const [sheetData, setSheetData] = useState<
     Record<string, Record<string, { value: number; is_calculated: boolean }>>
@@ -48,7 +49,6 @@ const CapEx: React.FC = () => {
         setShowDropdown(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -56,40 +56,33 @@ const CapEx: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       const yearNum = selectedYear.replace("Year ", "");
-
       try {
-        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const data = await response.json();
-        setSheetData(data);
+        if (stressTestingActive) {
+          // Fetch from stress-test endpoint
+          const response = await fetch("http://localhost:8000/api/stress-test");
+          const data = await response.json();
+          if (data && data[sheetType]) {
+            setSheetData(data[sheetType]);
+          } else {
+            console.error(`No data found for sheet type: ${sheetType}`);
+          }
+        } else {
+          // Normal mode fetch
+          const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+          const data = await response.json();
+          setSheetData(data);
+        }
       } catch (error) {
         console.error("Error fetching sheet data:", error);
       }
     };
-
     fetchData();
-  }, [selectedYear]);
+  }, [selectedYear, stressTestingActive]);
 
-  const handleInputChange = async (
-    fieldName: string,
-    quarterIdx: number,
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const newValue = parseFloat(event.target.value) || 0;
+  // API call to update data (disabled in stress testing mode)
+  const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
+    if (stressTestingActive) return; // Prevent updates in stress mode
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
-    const quarterKey = getQuarterKey(selectedYear, quarterIdx);
-
-    setSheetData((prev) => ({
-      ...prev,
-      [fieldName]: {
-        ...prev[fieldName],
-        [quarterKey]: {
-          ...prev[fieldName]?.[quarterKey],
-          value: newValue,
-          is_calculated: false,
-        },
-      },
-    }));
-
     try {
       const response = await fetch("http://localhost:8000/api/update-cell", {
         method: "POST",
@@ -100,12 +93,10 @@ const CapEx: React.FC = () => {
           field_name: fieldName,
           year_num: yearNum,
           quarter_num: quarterIdx + 1,
-          value: newValue,
+          value: value,
         }),
       });
-
       const result = await response.json();
-
       if (response.ok && result.status === "success") {
         const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
         const updatedData = await updated.json();
@@ -124,17 +115,24 @@ const CapEx: React.FC = () => {
         <div className="container mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
-              CapEx Metrics{" "}
-              <span className="info-icon"><BsInfoCircleFill /></span>
+              CapEx Metrics <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
+              <button
+                className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
+                onClick={() => setStressTestingActive(prev => !prev)}
+              >
+                <span className="circle-indicator" />
+                <span className="pill-label">Stress Testing</span>
+              </button>
+
               <div className="position-relative" ref={dropdownRef}>
                 <button
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
                   onClick={() => {
                     setViewMode("quarter");
-                    setShowDropdown((prev) => !prev);
+                    setShowDropdown(prev => !prev);
                   }}
                 >
                   <span className="circle-indicator" />
@@ -210,7 +208,32 @@ const CapEx: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              onChange={(e) => handleInputChange(metric.name, qIdx, e)}
+                              readOnly={stressTestingActive}
+                              style={stressTestingActive ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              onChange={(e) => {
+                                if (stressTestingActive) return;
+                                const newValue = parseFloat(e.target.value) || 0;
+                                setSheetData(prev => ({
+                                  ...prev,
+                                  [metric.name]: {
+                                    ...prev[metric.name],
+                                    [q.key]: {
+                                      ...prev[metric.name]?.[q.key],
+                                      value: newValue,
+                                      is_calculated: false,
+                                    },
+                                  },
+                                }));
+                              }}
+                              onBlur={(e) => {
+                                if (stressTestingActive) return;
+                                const newValue = parseFloat(e.target.value) || 0;
+                                updateCellAPI(metric.name, qIdx, newValue);
+                              }}
+                              onKeyDown={(e) => {
+                                if (stressTestingActive) return;
+                                if (e.key === "Enter") e.currentTarget.blur();
+                              }}
                             />
                           ) : (
                             <span>{value.toLocaleString("en-IN")}</span>

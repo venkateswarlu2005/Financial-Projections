@@ -19,6 +19,7 @@ const Valuation: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [stressTestingActive, setStressTestingActive] = useState(false);
 
   const [sheetData, setSheetData] = useState<
     Record<string, Record<string, { value: number; is_calculated: boolean }>>
@@ -53,42 +54,30 @@ const Valuation: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch data when selected year changes
+  // Fetch data when selected year or stress testing changes
   useEffect(() => {
     const fetchData = async () => {
       const yearNum = selectedYear.replace("Year ", "");
       try {
-        const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const data = await res.json();
-        setSheetData(data);
+        if (stressTestingActive) {
+          const res = await fetch("http://localhost:8000/api/stress-test");
+          const data = await res.json();
+          if (data && data[sheetType]) setSheetData(data[sheetType]);
+        } else {
+          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+          const data = await res.json();
+          setSheetData(data);
+        }
       } catch (err) {
         console.error("Error fetching valuation data:", err);
       }
     };
     fetchData();
-  }, [selectedYear]);
+  }, [selectedYear, stressTestingActive]);
 
-  const handleInputChange = async (
-    fieldName: string,
-    quarterIdx: number,
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const newValue = parseFloat(e.target.value) || 0;
+  const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
+    if (stressTestingActive) return;
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
-    const quarterKey = getQuarterKey(selectedYear, quarterIdx);
-
-    setSheetData(prev => ({
-      ...prev,
-      [fieldName]: {
-        ...prev[fieldName],
-        [quarterKey]: {
-          ...prev[fieldName]?.[quarterKey],
-          value: newValue,
-          is_calculated: false,
-        },
-      },
-    }));
-
     try {
       const res = await fetch("http://localhost:8000/api/update-cell", {
         method: "POST",
@@ -99,12 +88,10 @@ const Valuation: React.FC = () => {
           field_name: fieldName,
           year_num: yearNum,
           quarter_num: quarterIdx + 1,
-          value: newValue,
+          value: value,
         }),
       });
-
       const result = await res.json();
-
       if (res.ok && result.status === "success") {
         const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
         const updatedData = await updated.json();
@@ -127,6 +114,14 @@ const Valuation: React.FC = () => {
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
+              <button
+                className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
+                onClick={() => setStressTestingActive(prev => !prev)}
+              >
+                <span className="circle-indicator" />
+                <span className="pill-label">Stress Testing</span>
+              </button>
+
               <div className="position-relative" ref={dropdownRef}>
                 <button
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
@@ -207,7 +202,32 @@ const Valuation: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              onChange={(e) => handleInputChange(metric.label, qIdx, e)}
+                              readOnly={stressTestingActive}
+                              style={stressTestingActive ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              onChange={(e) => {
+                                if (stressTestingActive) return;
+                                const newValue = parseFloat(e.target.value) || 0;
+                                setSheetData(prev => ({
+                                  ...prev,
+                                  [metric.label]: {
+                                    ...prev[metric.label],
+                                    [p.key]: {
+                                      ...prev[metric.label]?.[p.key],
+                                      value: newValue,
+                                      is_calculated: false,
+                                    },
+                                  },
+                                }));
+                              }}
+                              onBlur={(e) => {
+                                if (stressTestingActive) return;
+                                const newValue = parseFloat(e.target.value) || 0;
+                                updateCellAPI(metric.label, qIdx, newValue);
+                              }}
+                              onKeyDown={(e) => {
+                                if (stressTestingActive) return;
+                                if (e.key === "Enter") e.currentTarget.blur();
+                              }}
                             />
                           ) : (
                             <span>{value.toLocaleString("en-IN")}</span>
