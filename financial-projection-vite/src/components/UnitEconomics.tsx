@@ -48,30 +48,50 @@ const UnitEconomics: React.FC = () => {
   }, []);
 
   // Fetch data (all years or stress test)
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (stressTestingActive) {
-          const res = await fetch("http://localhost:8000/api/stress-test");
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      if (stressTestingActive) {
+        // Send empty/default values for stress test
+        const defaultPayload = {
+          start_year: null,
+          start_quarter: null,
+          customer_drop_percentage: null,
+          pricing_pressure_percentage: null,
+          cac_increase_percentage: null,
+          is_technology_failure: false,
+          interest_rate_shock: null,
+          market_entry_underperformance_percentage: null,
+          is_economic_recession: false
+        };
+
+        const res = await fetch("http://localhost:8000/api/stress-test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(defaultPayload),
+        });
+
+        const data = await res.json();
+        if (data && data[sheetType]) setSheetData(data[sheetType]);
+      } else {
+        // Regular data fetch for all years
+        let combined: Record<string, any> = {};
+        for (let y = 1; y <= 5; y++) {
+          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${y}`);
           const data = await res.json();
-          if (data && data[sheetType]) setSheetData(data[sheetType]);
-        } else {
-          let combined: Record<string, any> = {};
-          for (let y = 1; y <= 5; y++) {
-            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${y}`);
-            const data = await res.json();
-            for (const metric in data) {
-              combined[metric] = { ...(combined[metric] || {}), ...data[metric] };
-            }
+          for (const metric in data) {
+            combined[metric] = { ...(combined[metric] || {}), ...data[metric] };
           }
-          setSheetData(combined);
         }
-      } catch (err) {
-        console.error("Error fetching unit economics data:", err);
+        setSheetData(combined);
       }
-    };
-    fetchData();
-  }, [stressTestingActive]);
+    } catch (err) {
+      console.error("Error fetching unit economics data:", err);
+    }
+  };
+  fetchData();
+}, [stressTestingActive]);
+
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive) return;
