@@ -60,7 +60,22 @@ const Financial: React.FC = () => {
       const yearNum = selectedYear.replace("Year ", "");
       try {
         if (stressTestingActive) {
-          const response = await fetch("http://localhost:8000/api/stress-test");
+          const defaultPayload = {
+           start_year: 0,
+           start_quarter: 0,
+           customer_drop_percentage: 0,
+           pricing_pressure_percentage: 0,
+           cac_increase_percentage: 0,
+           is_technology_failure: false,
+           interest_rate_shock: 0,
+           market_entry_underperformance_percentage: 0,
+           is_economic_recession: false
+         };
+          const response = await fetch("http://localhost:8000/api/stress-test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(defaultPayload),
+          });
           const data = await response.json();
           if (data && data[sheetType]) setSheetData(data[sheetType]);
         } else {
