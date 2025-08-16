@@ -69,40 +69,51 @@ const OpEx: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+useEffect(() => {
+  const fetchData = async () => {
+    const yearNum = selectedYear.replace("Year ", "");
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const yearNum = selectedYear.replace("Year ", "");
-      try {
-        const endpoint = stressTestingActive
-          ? "http://localhost:8000/api/stress-test"
-          : `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`;
+    try {
+      if (stressTestingActive) {
+        // Send empty/default payload for stress test
+        const defaultPayload = {
+          start_year: null,
+          start_quarter: null,
+          customer_drop_percentage: 0,
+          pricing_pressure_percentage: 0,
+          cac_increase_percentage: 0,
+          is_technology_failure: false,
+          interest_rate_shock: 0,
+          market_entry_underperformance_percentage: 0,
+          is_economic_recession: false
+        };
 
-        const response = await fetch(endpoint);
+        const response = await fetch("http://localhost:8000/api/stress-test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(defaultPayload),
+        });
+
         const data = await response.json();
-
         if (data && data[sheetType]) {
           setSheetData(data[sheetType]);
-        } else if (!stressTestingActive) {
-          setSheetData(data);
         } else {
           console.error("No data found for sheet type:", sheetType);
         }
-      } catch (error) {
-        console.error("Error fetching sheet data:", error);
+      } else {
+        // Normal mode fetch
+        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const data = await response.json();
+        setSheetData(data);
       }
-    };
-    fetchData();
-  }, [selectedYear, stressTestingActive]);
+    } catch (error) {
+      console.error("Error fetching sheet data:", error);
+    }
+  };
+
+  fetchData();
+}, [selectedYear, stressTestingActive]);
+
 
   const updateCellAPI = async (fieldName: string, periodIdx: number, value: number) => {
     if (stressTestingActive) return; // Prevent updates in stress mode
