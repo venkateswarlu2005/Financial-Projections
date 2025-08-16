@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Slider } from "primereact/slider";
 import { BsInfoCircleFill } from "react-icons/bs";
 import { HiDownload } from "react-icons/hi";
+import { useStressTest } from "./StressTestContext"; 
 import "./StressTesting.css";
 
 const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -29,6 +30,9 @@ const StressTesting = () => {
     is_economic_recession: false,
   });
 
+  // Access context setters to save API input/output
+  const { setData, setInput } = useStressTest();
+
   const handleSliderChange = (field: string, value: number) => {
     setSliders((prev) => ({ ...prev, [field]: value }));
   };
@@ -47,6 +51,7 @@ const StressTesting = () => {
       ...sliders,
       ...switches,
     };
+    setInput(payload); // Save API input in context
     try {
       const res = await fetch("http://localhost:8000/api/stress-test", {
         method: "POST",
@@ -54,6 +59,7 @@ const StressTesting = () => {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
+      setData(data); // Save API response in context
       console.log("Stress Test Response:", data);
     } catch (err) {
       console.error(err);
@@ -68,8 +74,7 @@ const StressTesting = () => {
         setShowQuarterDropdown(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () =>
-      document.removeEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
