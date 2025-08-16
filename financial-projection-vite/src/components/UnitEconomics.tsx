@@ -54,14 +54,14 @@ useEffect(() => {
       if (stressTestingActive) {
         // Send empty/default values for stress test
         const defaultPayload = {
-          start_year: null,
-          start_quarter: null,
-          customer_drop_percentage: null,
-          pricing_pressure_percentage: null,
-          cac_increase_percentage: null,
+          start_year: 0,
+          start_quarter: 0,
+          customer_drop_percentage: 0,
+          pricing_pressure_percentage: 0,
+          cac_increase_percentage: 0,
           is_technology_failure: false,
-          interest_rate_shock: null,
-          market_entry_underperformance_percentage: null,
+          interest_rate_shock: 0,
+          market_entry_underperformance_percentage: 0,
           is_economic_recession: false
         };
 
