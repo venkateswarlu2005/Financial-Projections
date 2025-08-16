@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
-import { useStressTest } from "./StressTestContext"; // Adjust path accordingly
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
+
 const metricItems = [
   { label: "Average Brokerage Per User Per Trade", type: "input" },
   { label: "Average No of Trades Per Day Per User", type: "input" },
@@ -49,12 +49,12 @@ const Revenue: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [stressTestingActive, setStressTestingActive] = useState(false);
+
   const [sheetData, setSheetData] = useState<
     Record<string, Record<string, { value: number; is_calculated: boolean }>>
   >({});
-  const sheetType = "revenue";
 
-  const { data: stressData } = useStressTest();
+  const sheetType = "revenue";
 
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
@@ -87,9 +87,26 @@ const Revenue: React.FC = () => {
     const fetchData = async () => {
       const yearNum = selectedYear.replace("Year ", "");
       try {
-        if (stressTestingActive && stressData && stressData[sheetType]) {
-          // Use stress testing data from context when active
-          setSheetData(stressData[sheetType]);
+        if (stressTestingActive) {
+         // Send empty/default values for stress test
+         const defaultPayload = {
+           start_year: 0,
+           start_quarter: 0,
+           customer_drop_percentage: 0,
+           pricing_pressure_percentage: 0,
+           cac_increase_percentage: 0,
+           is_technology_failure: false,
+           interest_rate_shock: 0,
+           market_entry_underperformance_percentage: 0,
+           is_economic_recession: false
+         };
+          const response = await fetch("http://localhost:8000/api/stress-test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(defaultPayload),
+          });
+          const data = await response.json();
+        if (data && data[sheetType]) setSheetData(data[sheetType]);
         } else {
           // Normal mode fetch
           const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
@@ -101,11 +118,12 @@ const Revenue: React.FC = () => {
       }
     };
     fetchData();
-  }, [selectedYear, stressTestingActive, stressData]);
+  }, [selectedYear, stressTestingActive]);
 
   // API call to update data (disabled in stress testing mode)
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive) return; // Prevent updates in stress mode
+
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
       const response = await fetch("http://localhost:8000/api/update-cell", {
@@ -120,7 +138,9 @@ const Revenue: React.FC = () => {
           value: value,
         }),
       });
+
       const result = await response.json();
+
       if (response.ok && result.status === "success") {
         const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
         const updatedData = await updated.json();
@@ -142,6 +162,7 @@ const Revenue: React.FC = () => {
               Revenue Streams & Income{" "}
               <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
+
             <div className="d-flex gap-2 btn-group-pill-toggle">
               <button
                 className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
@@ -150,6 +171,7 @@ const Revenue: React.FC = () => {
                 <span className="circle-indicator" />
                 <span className="pill-label">Stress Testing</span>
               </button>
+
               <div className="position-relative" ref={dropdownRef}>
                 <button
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
@@ -161,6 +183,7 @@ const Revenue: React.FC = () => {
                   <span className="circle-indicator" />
                   <span className="pill-label">Quarter Wise</span>
                 </button>
+
                 {showDropdown && (
                   <div className="custom-dropdown">
                     {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
@@ -179,6 +202,7 @@ const Revenue: React.FC = () => {
                   </div>
                 )}
               </div>
+
               <button
                 className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
                 onClick={() => {
@@ -189,11 +213,13 @@ const Revenue: React.FC = () => {
                 <span className="circle-indicator" />
                 <span className="pill-label">Year Wise</span>
               </button>
+
               <button className="pill-toggle-btn no-dot">
                 <span className="pill-label">Download</span>
               </button>
             </div>
           </div>
+
           <table className="table table-borderless table-hover revenue-table">
             <thead>
               <tr>
@@ -203,6 +229,7 @@ const Revenue: React.FC = () => {
                 ))}
               </tr>
             </thead>
+
             <tbody>
               {metricItems.map((metric, idx) => (
                 <React.Fragment key={idx}>
@@ -213,46 +240,49 @@ const Revenue: React.FC = () => {
                         {metric.type === "input" ? "Input" : "Auto"}
                       </div>
                     </td>
+
                     {getDisplayedQuarters().map((q, qIdx) => {
                       const metricData = sheetData?.[metric.label]?.[q.key];
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
+
                       return (
                         <td key={qIdx}>
                           {metric.type === "input" && !isCalculated && viewMode === "quarter" ? (
                             <input
-                              type="number"
-                              className="form-control form-control-sm"
-                              value={value}
-                              readOnly={stressTestingActive} // Completely prevent typing
-                              style={stressTestingActive ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
-                              onChange={(e) => {
-                                if (stressTestingActive) return; // ignore changes
-                                const newValue = parseFloat(e.target.value) || 0;
-                                setSheetData((prev) => ({
-                                  ...prev,
-                                  [metric.label]: {
-                                    ...prev[metric.label],
-                                    [q.key]: {
-                                      ...prev[metric.label]?.[q.key],
-                                      value: newValue,
-                                      is_calculated: false,
-                                    },
-                                  },
-                                }));
-                              }}
-                              onBlur={(e) => {
+                             type="number"
+                             className="form-control form-control-sm"
+                             value={value}
+                             readOnly={stressTestingActive} // Completely prevent typing
+                             style={stressTestingActive ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                             onChange={(e) => {
+                               if (stressTestingActive) return; // ignore changes
+                               const newValue = parseFloat(e.target.value) || 0;
+                               setSheetData((prev) => ({
+                                 ...prev,
+                                 [metric.label]: {
+                                   ...prev[metric.label],
+                                   [q.key]: {
+                                     ...prev[metric.label]?.[q.key],
+                                     value: newValue,
+                                     is_calculated: false,
+                                   },
+                                 },
+                               }));
+                             }}
+                             onBlur={(e) => {
                                 if (stressTestingActive) return;
-                                const newValue = parseFloat(e.target.value) || 0;
-                                updateCellAPI(metric.label, qIdx, newValue);
-                              }}
-                              onKeyDown={(e) => {
-                                if (stressTestingActive) return;
-                                if (e.key === "Enter") {
-                                  e.currentTarget.blur();
-                                }
-                              }}
-                            />
+                               const newValue = parseFloat(e.target.value) || 0;
+                               updateCellAPI(metric.label, qIdx, newValue);
+                             }}
+                             onKeyDown={(e) => {
+                               if (stressTestingActive) return;
+                               if (e.key === "Enter") {
+                                 e.currentTarget.blur();
+                               }
+                             }}
+                           />
+                           
                           ) : (
                             <span>{value.toLocaleString("en-IN")}</span>
                           )}
@@ -260,6 +290,7 @@ const Revenue: React.FC = () => {
                       );
                     })}
                   </tr>
+
                   {metric.addGapAfter && (
                     <tr className="gap-row">
                       <td colSpan={quarters.length + 1}></td>
