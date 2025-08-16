@@ -208,3 +208,108 @@
   width: 100%; /* Ensure it spans full width to allow right alignment */
 }
 
+
+
+.slider-item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.switches-row .form-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.switches-row .form-check-input {
+  width: 60px;       /* wider for a pill-like look */
+  height: 30px;      /* taller */
+  cursor: pointer;
+  background-color: #e0e0e0;
+  border-radius: 50px;
+  position: relative;
+  transition: background-color 0.3s;
+}
+
+.switches-row .form-check-input:checked {
+  background-color: #ed7d22; /* orange when on */
+}
+
+.switches-row .form-check-input::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;       /* handle size */
+  height: 24px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.switches-row .form-check-input:checked::before {
+  transform: translateX(30px); /* move handle when checked */
+}
+
+.switches-row .form-check-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+}
+
+
+.sliders-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem 1.5rem;
+  margin-bottom: 3rem; /* space after sliders */
+}
+/* Custom Pill Switch Styles */
+.custom-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.custom-switch-input {
+  width: 60px;
+  height: 30px;
+  cursor: pointer;
+  background-color: #e0e0e0;
+  border: none;
+  border-radius: 50px;
+  appearance: none;
+  position: relative;
+  outline: none;
+  transition: background-color 0.3s;
+}
+.custom-switch-input:checked {
+  background-color: #ed7d22;
+}
+.custom-switch-input::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  background-color: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+  transition: transform 0.3s;
+}
+.custom-switch-input:checked::before {
+  transform: translateX(30px);
+}
+.custom-switch-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  user-select: none;
+}
+
+
+
+
