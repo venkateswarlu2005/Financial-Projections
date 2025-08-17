@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import './Sidebar.css';
 import { Link, useLocation } from 'react-router-dom';
 import { MdOutlineDashboardCustomize } from 'react-icons/md';
@@ -11,6 +11,9 @@ import { AiOutlineBank, AiOutlineMergeCells } from 'react-icons/ai';
 import { RiBugLine } from 'react-icons/ri';
 import { PiGraphLight } from 'react-icons/pi';
 import { GrMoney } from 'react-icons/gr';
+
+// ✅ import RoleContext
+import { RoleContext } from '../App';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -34,11 +37,9 @@ const menu = [
     ],
   },
   {
-    section: 'Financials',
+    section: 'Stratergy',
     items: [
       { label: 'Stress Testing', path: '/stress-testing', icon: <RiBugLine /> },
-      { label: 'Scenario Analysis', path: '/scenario-analysis', icon: <PiGraphLight /> },
-     
     ],
   },
   {
@@ -46,7 +47,7 @@ const menu = [
     items: [
       { label: 'Revenue', path: '/revenue', icon: <LuCircleDollarSign /> },
       { label: 'Growth Funnel', path: '/growth', icon:<IoMdTrendingUp />  },
-       { label: 'OpEx', path: '/opex', icon: <FiCpu /> },
+      { label: 'OpEx', path: '/opex', icon: <FiCpu /> },
       { label: 'Salaries', path: '/salaries', icon: <HiOutlineUserGroup /> },
       { label: 'CapEx', path: '/capex', icon: <AiOutlineBank /> },
       { label: 'M&A', path: '/M&A', icon: <AiOutlineMergeCells /> },
@@ -56,6 +57,12 @@ const menu = [
 
 const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
   const location = useLocation();
+  const { isManager } = useContext(RoleContext); // ✅ access role
+
+  // ✅ Hide "Financials" sections if Manager
+  const filteredMenu = isManager
+    ? menu.filter((section) => section.section !== 'Stratergy')
+    : menu;
 
   return (
     <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
@@ -75,9 +82,11 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
 
       {/* Scrollable Menu */}
       <div className="menu-container">
-        {menu.map((section) => (
+        {filteredMenu.map((section) => (
           <div key={section.section} className="menu-section">
-            {!collapsed && <div className="section-title">{section.section}</div>}
+            {!collapsed && section.section && (
+              <div className="section-title">{section.section}</div>
+            )}
             {section.items.map((item) => (
               <Link
                 key={item.path}

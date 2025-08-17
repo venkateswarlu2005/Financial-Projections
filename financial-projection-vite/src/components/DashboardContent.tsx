@@ -219,15 +219,6 @@ const revenuePieChartData = {
     ],
   };
 
-  const dummyChartData = {
-    labels: [],
-    datasets: [
-      {
-        data: [],
-        backgroundColor: [],
-      },
-    ],
-  };
 
   return (
     <div className="dashboard">
