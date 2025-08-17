@@ -183,14 +183,13 @@ const Growth: React.FC = () => {
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
-              {/* Stress Testing Toggle */}
-              <button
+                {!isManager&&(<button
                 className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
                 onClick={() => setStressTestingActive(prev => !prev)}
               >
                 <span className="circle-indicator" />
                 <span className="pill-label">Stress Testing</span>
-              </button>
+              </button>)}
 
               <div className="position-relative" ref={dropdownRef}>
                 <button

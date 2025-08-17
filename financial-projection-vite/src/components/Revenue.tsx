@@ -166,14 +166,15 @@ const Revenue: React.FC = () => {
               <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
 
-                        <div className="d-flex gap-2 btn-group-pill-toggle">
-              <button
+              <div className="d-flex gap-2 btn-group-pill-toggle">
+                {!isManager&&(<button
                 className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
                 onClick={() => _setStressTestingActive(prev => !prev)}
               >
                 <span className="circle-indicator" />
                 <span className="pill-label">Stress Testing</span>
-              </button>
+              </button>)}
+              
 
               <div className="position-relative" ref={dropdownRef}>
                 <button
