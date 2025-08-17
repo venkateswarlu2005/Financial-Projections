@@ -44,7 +44,6 @@ const metricItems = [
   { label: "Average Revenue Per User", type: "auto" },
 ];
 
-
 interface RevenueProps {
   stressTestData: any;
 }
@@ -57,7 +56,6 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
   const [stressTestingActive, setStressTestingActive] = useState(false);
   const [sheetData, setSheetData] = useState<any>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
-
   const sheetType = "revenue";
 
   const getQuarterKey = (year: string, quarterIdx: number) => `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
@@ -156,22 +154,27 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
               <button className={`pill-toggle-btn ${viewMode==="year"?"active":""}`} onClick={()=>setViewMode("year")}>
                 <span className="circle-indicator" /><span className="pill-label">Year Wise</span>
               </button>
+
+              <button className="pill-toggle-btn no-dot">
+                <span className="pill-label">Download</span>
+              </button>
             </div>
           </div>
 
           <table className="table table-borderless table-hover revenue-table">
             <thead>
               <tr>
-                <th>Metrics</th>
-                {getDisplayedQuarters().map((q,i)=> <th key={i}>{q.label}</th> )}
+                <th className="metrics-header">Metrics</th>
+                {getDisplayedQuarters().map((q,i)=> <th key={i} className="quarter-header">{q.label}</th> )}
               </tr>
             </thead>
             <tbody>
               {metricItems.map((metric,idx)=>(
                 <React.Fragment key={idx}>
-                  <tr>
+                  <tr className="align-middle">
                     <td>
-                      {metric.label} <div style={{fontSize:"12px", color:"#777"}}>{metric.type==="input"?"Input":"Auto"}</div>
+                      <div className="mb-1">{metric.label}</div>
+                      <div className="text-muted" style={{fontSize:"12px"}}>{metric.type==="input"?"Input":"Auto"}</div>
                     </td>
                     {getDisplayedQuarters().map((q,qIdx)=>{
                       const metricData = sheetData?.[metric.label]?.[q.key];
@@ -185,6 +188,7 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
                               className="form-control form-control-sm"
                               value={value}
                               readOnly={stressTestingActive || !isManager}
+                              style={stressTestingActive || !isManager ? { backgroundColor:"#f5f5f5", cursor:"not-allowed" } : {}}
                               onChange={(e)=>{
                                 if(stressTestingActive||!isManager) return;
                                 const newVal = parseFloat(e.target.value)||0;
@@ -194,6 +198,7 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
                                 }));
                               }}
                               onBlur={(e)=>{if(!stressTestingActive && isManager) updateCellAPI(metric.label,qIdx,parseFloat(e.target.value)||0)}}
+                              onKeyDown={(e)=>{if(!stressTestingActive && isManager && e.key==="Enter") e.currentTarget.blur()}}
                             />
                           ) : (
                             <span>{value.toLocaleString("en-IN")}</span>
