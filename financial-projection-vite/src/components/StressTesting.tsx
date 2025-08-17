@@ -1,155 +1,91 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Slider } from "primereact/slider";
 import { BsInfoCircleFill } from "react-icons/bs";
 import { HiDownload } from "react-icons/hi";
 import "./StressTesting.css";
 
-const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
-const quarters = ["Q1", "Q2", "Q3", "Q4"];
+const years = ["Year 1","Year 2","Year 3","Year 4","Year 5"];
+const quarters = ["Q1","Q2","Q3","Q4"];
 
 interface StressTestingProps {
   setStressTestData: React.Dispatch<React.SetStateAction<any>>;
 }
 
-const StressTesting: React.FC<StressTestingProps> = ({ setStressTestData }) => {
-  const [showYearDropdown, setShowYearDropdown] = useState(false);
-  const [showQuarterDropdown, setShowQuarterDropdown] = useState(false);
+const StressTesting: React.FC<StressTestingProps> = ({ setStressTestData })=>{
+  const [startYear,setStartYear] = useState("Year 1");
+  const [startQuarter,setStartQuarter] = useState("Q1");
+  const [sliders,setSliders] = useState({
+    customer_drop_percentage:25,
+    pricing_pressure_percentage:0,
+    cac_increase_percentage:0,
+    market_entry_underperformance_percentage:0,
+    interest_rate_shock:0
+  });
+  const [switches,setSwitches] = useState({is_technology_failure:false,is_economic_recession:false});
   const yearRef = useRef<HTMLDivElement>(null);
   const quarterRef = useRef<HTMLDivElement>(null);
+  const [showYearDropdown,setShowYearDropdown] = useState(false);
+  const [showQuarterDropdown,setShowQuarterDropdown] = useState(false);
 
-  const [startYear, setStartYear] = useState("Year 1");
-  const [startQuarter, setStartQuarter] = useState("Q1");
+  const handleSliderChange = (key:string,value:number)=>setSliders(prev=>({...prev,[key]:value}));
+  const handleSwitchChange = (key:string)=>setSwitches(prev=>({...prev,[key as keyof typeof prev]:!prev[key as keyof typeof prev]}));
 
-  const [sliders, setSliders] = useState({
-    customer_drop_percentage: 25,
-    pricing_pressure_percentage: 0,
-    cac_increase_percentage: 0,
-    market_entry_underperformance_percentage: 0,
-    interest_rate_shock: 0, // Start value for -2 to 2 range
-  });
-
-  const [switches, setSwitches] = useState({
-    is_technology_failure: false,
-    is_economic_recession: false,
-  });
-
-  const handleSliderChange = (field: string, value: number) => {
-    setSliders((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSwitchChange = (field: string) => {
-    setSwitches((prev) => ({
-      ...prev,
-      [field as keyof typeof prev]: !prev[field as keyof typeof prev],
-    }));
-  };
-
-  const handleSend = async () => {
+  const handleSend = async ()=>{
     const payload = {
-      start_year: parseInt(startYear.replace("Year ", "")),
-      start_quarter: quarters.indexOf(startQuarter) + 1,
+      start_year: parseInt(startYear.replace("Year ","")),
+      start_quarter: quarters.indexOf(startQuarter)+1,
       ...sliders,
-      ...switches,
+      ...switches
     };
-    try {
-      const res = await fetch("http://localhost:8000/api/stress-test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    try{
+      const res = await fetch("http://localhost:8000/api/stress-test",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
-      console.log("Stress Test Response:", data);
-      setStressTestData(data); // ✅ lift data to parent
-    } catch (err) {
-      console.error(err);
-    }
+      console.log("Stress Test Response:",data);
+      if(setStressTestData) setStressTestData(data);
+    }catch(err){console.error(err);}
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (yearRef.current && !yearRef.current.contains(event.target as Node))
-        setShowYearDropdown(false);
-      if (quarterRef.current && !quarterRef.current.contains(event.target as Node))
-        setShowQuarterDropdown(false);
+  useEffect(()=>{
+    const handleClickOutside = (event:MouseEvent)=>{
+      if(yearRef.current && !yearRef.current.contains(event.target as Node)) setShowYearDropdown(false);
+      if(quarterRef.current && !quarterRef.current.contains(event.target as Node)) setShowQuarterDropdown(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("mousedown",handleClickOutside);
+    return ()=>document.removeEventListener("mousedown",handleClickOutside);
+  },[]);
 
   return (
     <div className="stress-testing">
       <div className="stress-box p-4 rounded">
-        {/* Header */}
-        <div className="d-flex justify-content-between align-items-start mb-3">
-          <div className="upper-text">
-            <h6 className="fw-bold mb-1 d-flex align-items-center">
-              Investment Stress Testing <BsInfoCircleFill className="ms-1 text-muted" />
-            </h6>
-            <p className="small text-muted mb-0">
-              Modify key assumptions to test business resilience and understand risk factors
-            </p>
+        <div className="d-flex justify-content-between mb-3">
+          <div>
+            <h6 className="fw-bold d-flex align-items-center">Investment Stress Testing <BsInfoCircleFill className="ms-1 text-muted"/></h6>
+            <p className="small text-muted">Modify key assumptions to test business resilience and understand risk factors</p>
           </div>
-          <button className="pill-btn pill-outline" onClick={handleSend}>
-            <HiDownload className="me-1" />
-            Run Stress Test
-          </button>
+          <button className="pill-btn pill-outline" onClick={handleSend}><HiDownload className="me-1"/>Run Stress Test</button>
         </div>
-
         {/* Dropdowns */}
-        <div className="d-flex flex-row gap-3 mb-4">
-          <div className="flex-fill position-relative" ref={yearRef}>
+        <div className="d-flex gap-3 mb-4">
+          <div ref={yearRef} className="position-relative flex-fill">
             <label className="form-label small text-muted">Start Year</label>
-            <button
-              className="form-select pill-select"
-              onClick={() => setShowYearDropdown((prev) => !prev)}
-            >
-              {startYear}
-            </button>
-            {showYearDropdown && (
-              <div className="custom-dropdown">
-                {years.map((y) => (
-                  <div
-                    key={y}
-                    className={`dropdown-item-pill ${y === startYear ? "selected" : ""}`}
-                    onClick={() => {
-                      setStartYear(y);
-                      setShowYearDropdown(false);
-                    }}
-                  >
-                    {y}
-                  </div>
-                ))}
-              </div>
-            )}
+            <button className="form-select pill-select" onClick={()=>setShowYearDropdown(prev=>!prev)}>{startYear}</button>
+            {showYearDropdown && <div className="custom-dropdown">{years.map(y=>(
+              <div key={y} className={y===startYear?"dropdown-item-pill selected":"dropdown-item-pill"} onClick={()=>{setStartYear(y); setShowYearDropdown(false)}}>{y}</div>
+            ))}</div>}
           </div>
-          <div className="flex-fill position-relative" ref={quarterRef}>
+          <div ref={quarterRef} className="position-relative flex-fill">
             <label className="form-label small text-muted">Start Quarter</label>
-            <button
-              className="form-select pill-select"
-              onClick={() => setShowQuarterDropdown((prev) => !prev)}
-            >
-              {startQuarter}
-            </button>
-            {showQuarterDropdown && (
-              <div className="custom-dropdown">
-                {quarters.map((q) => (
-                  <div
-                    key={q}
-                    className={`dropdown-item-pill ${q === startQuarter ? "selected" : ""}`}
-                    onClick={() => {
-                      setStartQuarter(q);
-                      setShowQuarterDropdown(false);
-                    }}
-                  >
-                    {q}
-                  </div>
-                ))}
-              </div>
-            )}
+            <button className="form-select pill-select" onClick={()=>setShowQuarterDropdown(prev=>!prev)}>{startQuarter}</button>
+            {showQuarterDropdown && <div className="custom-dropdown">{quarters.map(q=>(
+              <div key={q} className={q===startQuarter?"dropdown-item-pill selected":"dropdown-item-pill"} onClick={()=>{setStartQuarter(q); setShowQuarterDropdown(false)}}>{q}</div>
+            ))}</div>}
           </div>
         </div>
-
-        {/* Custom Switches */}
+                {/* Custom Switches */}
         <div className="switches-row d-flex gap-4 mb-4">
           {[
             { label: "Technology Failure", key: "is_technology_failure" },
@@ -213,7 +149,7 @@ const StressTesting: React.FC<StressTestingProps> = ({ setStressTestData }) => {
         </div>
       </div>
     </div>
-  );
+  )
 };
 
 export default StressTesting;

@@ -1,6 +1,6 @@
-// App.tsx
-import { useState } from "react";
+import React, { useState, createContext } from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
 
 import TopNavbar from "./components/TopNavbar";
@@ -20,37 +20,30 @@ import ScenarioAnalysis from "./components/ScenarioAnalysis";
 import StressTesting from "./components/StressTesting";
 import Financial from "./components/Financial";
 
-import "bootstrap/dist/css/bootstrap.min.css";
-
-// ✅ Create context so children can use role info
-import { createContext } from "react";
+// ✅ Role context
 export const RoleContext = createContext<{ isManager: boolean }>({ isManager: false });
 
 function App() {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isManager, setIsManager] = useState<boolean | null>(null); // null means not chosen yet
+  const [isManager, setIsManager] = useState<boolean | null>(null); // null = not chosen yet
+
+  // ✅ Lifted stress testing data
+  const [stressTestData, setStressTestData] = useState<any>(null);
 
   return (
     <Router>
       {isManager === null ? (
-        // show role selection if user hasn’t picked yet
         <RoleSelection setIsManager={setIsManager} />
       ) : (
         <RoleContext.Provider value={{ isManager }}>
           <div className="app-layout">
             <Sidebar collapsed={isSidebarCollapsed} setCollapsed={setSidebarCollapsed} />
-
-            <div
-              className="main-area"
-              style={{
-                paddingLeft: isSidebarCollapsed ? "80px" : "240px",
-              }}
-            >
+            <div className="main-area" style={{ paddingLeft: isSidebarCollapsed ? "80px" : "240px" }}>
               <TopNavbar />
               <div className="page-content">
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/revenue" element={<Revenue />} />
+                  <Route path="/revenue" element={<Revenue stressTestData={stressTestData} />} />
                   <Route path="/unit-economics" element={<UnitEconomics />} />
                   <Route path="/growth" element={<Growth />} />
                   <Route path="/opex" element={<OpEx />} />
@@ -58,7 +51,7 @@ function App() {
                   <Route path="/capex" element={<CapEx />} />
                   <Route path="/M&A" element={<GTM />} />
                   <Route path="/valuation" element={<Valuation />} />
-                  <Route path="/stress-testing" element={<StressTesting />} />
+                  <Route path="/stress-testing" element={<StressTesting setStressTestData={setStressTestData} />} />
                   <Route path="/scenario-analysis" element={<ScenarioAnalysis />} />
                   <Route path="/PnL-Statement" element={<Financial />} />
                   <Route path="*" element={<Navigate to="/dashboard" />} />
