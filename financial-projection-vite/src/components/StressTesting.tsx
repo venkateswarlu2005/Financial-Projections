@@ -1,4 +1,4 @@
-import  { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Slider } from "primereact/slider";
 import { BsInfoCircleFill } from "react-icons/bs";
 import { HiDownload } from "react-icons/hi";
@@ -7,7 +7,11 @@ import "./StressTesting.css";
 const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
-const StressTesting = () => {
+interface StressTestingProps {
+  setStressTestData: React.Dispatch<React.SetStateAction<any>>;
+}
+
+const StressTesting: React.FC<StressTestingProps> = ({ setStressTestData }) => {
   const [showYearDropdown, setShowYearDropdown] = useState(false);
   const [showQuarterDropdown, setShowQuarterDropdown] = useState(false);
   const yearRef = useRef<HTMLDivElement>(null);
@@ -55,6 +59,7 @@ const StressTesting = () => {
       });
       const data = await res.json();
       console.log("Stress Test Response:", data);
+      setStressTestData(data); // ✅ lift data to parent
     } catch (err) {
       console.error(err);
     }
@@ -68,8 +73,7 @@ const StressTesting = () => {
         setShowQuarterDropdown(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () =>
-      document.removeEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
@@ -145,7 +149,7 @@ const StressTesting = () => {
           </div>
         </div>
 
-        {/* Custom Pill Switches */}
+        {/* Custom Switches */}
         <div className="switches-row d-flex gap-4 mb-4">
           {[
             { label: "Technology Failure", key: "is_technology_failure" },

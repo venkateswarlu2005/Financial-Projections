@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
-import { RoleContext } from "../App"; // ✅ import role context
+import { RoleContext } from "../App"; // Role context
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
+// Define metrics for the table
 const metricItems = [
   { label: "Average Brokerage Per User Per Trade", type: "input" },
   { label: "Average No of Trades Per Day Per User", type: "input" },
@@ -19,7 +20,7 @@ const metricItems = [
   { label: "Revenue from Subscriptions", type: "auto", addGapAfter: true },
   { label: "Average Monthly AUM MF", type: "input" },
   { label: "Average Monthly Revenue", type: "auto", addGapAfter: true },
-  { label: "Average Ideal Broking Funds", type: "auto" },
+  { label: "Average Ideal Broking Funds", type: "input" },
   { label: "Revenue from Broking Interest", type: "auto", addGapAfter: true },
   { label: "Average Market Investment", type: "input" },
   { label: "Average Revenue from Investments", type: "auto" },
@@ -44,17 +45,19 @@ const metricItems = [
   { label: "Average Revenue Per User", type: "auto" },
 ];
 
-const Revenue: React.FC = () => {
-  const { isManager } = useContext(RoleContext); // ✅ get role
-  const [viewMode, _setViewMode] = useState<"quarter" | "year">("quarter");
-  const [selectedYear, _setSelectedYear] = useState("Year 1");
-  const [_showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [stressTestingActive, _setStressTestingActive] = useState(false);
+interface RevenueProps {
+  stressTestData: any;
+}
 
-  const [sheetData, setSheetData] = useState<
-    Record<string, Record<string, { value: number; is_calculated: boolean }>>
-  >({});
+const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
+  const { isManager } = useContext(RoleContext); // Role info
+
+  const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
+  const [selectedYear, setSelectedYear] = useState("Year 1");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [stressTestingActive, setStressTestingActive] = useState(false);
+  const [sheetData, setSheetData] = useState<any>({});
 
   const sheetType = "revenue";
 
@@ -75,6 +78,7 @@ const Revenue: React.FC = () => {
     }
   };
 
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -85,45 +89,28 @@ const Revenue: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch sheet data or use stress test data
   useEffect(() => {
     const fetchData = async () => {
-      const yearNum = selectedYear.replace("Year ", "");
-      try {
-        if (stressTestingActive) {
-          const defaultPayload = {
-            start_year: 0,
-            start_quarter: 0,
-            customer_drop_percentage: 0,
-            pricing_pressure_percentage: 0,
-            cac_increase_percentage: 0,
-            is_technology_failure: false,
-            interest_rate_shock: 0,
-            market_entry_underperformance_percentage: 0,
-            is_economic_recession: false,
-          };
-          const response = await fetch("http://localhost:8000/api/stress-test", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(defaultPayload),
-          });
-          const data = await response.json();
-          if (data && data[sheetType]) setSheetData(data[sheetType]);
-        } else {
-          const response = await fetch(
-            `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`
-          );
+      if (stressTestingActive && stressTestData) {
+        setSheetData(stressTestData[sheetType]);
+      } else {
+        try {
+          const yearNum = selectedYear.replace("Year ", "");
+          const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
           const data = await response.json();
           setSheetData(data);
+        } catch (error) {
+          console.error("Error fetching sheet data:", error);
         }
-      } catch (error) {
-        console.error("Error fetching sheet data:", error);
       }
     };
     fetchData();
-  }, [selectedYear, stressTestingActive]);
+  }, [selectedYear, stressTestingActive, stressTestData]);
 
+  // Update cell API (only allowed for manager & not stress testing)
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
-    if (stressTestingActive || !isManager) return; // ✅ block updates if not manager
+    if (stressTestingActive || !isManager) return;
 
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
@@ -143,9 +130,7 @@ const Revenue: React.FC = () => {
       const result = await response.json();
 
       if (response.ok && result.status === "success") {
-        const updated = await fetch(
-          `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`
-        );
+        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
         const updatedData = await updated.json();
         setSheetData(updatedData);
       } else {
@@ -162,25 +147,25 @@ const Revenue: React.FC = () => {
         <div className="container mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
-              Revenue Streams & Income{" "}
-              <span className="info-icon"><BsInfoCircleFill /></span>
+              Revenue Streams & Income <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
 
-              <div className="d-flex gap-2 btn-group-pill-toggle">
-                {!isManager&&(<button
-                className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
-                onClick={() => _setStressTestingActive(prev => !prev)}
-              >
-                <span className="circle-indicator" />
-                <span className="pill-label">Stress Testing</span>
-              </button>)}
-              
+            <div className="d-flex gap-2 btn-group-pill-toggle">
+              {!isManager && (
+                <button
+                  className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
+                  onClick={() => setStressTestingActive((prev) => !prev)}
+                >
+                  <span className="circle-indicator" />
+                  <span className="pill-label">Stress Testing</span>
+                </button>
+              )}
 
               <div className="position-relative" ref={dropdownRef}>
                 <button
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
                   onClick={() => {
-                    _setViewMode("quarter");
+                    setViewMode("quarter");
                     setShowDropdown((prev) => !prev);
                   }}
                 >
@@ -188,14 +173,14 @@ const Revenue: React.FC = () => {
                   <span className="pill-label">Quarter Wise</span>
                 </button>
 
-                {_showDropdown && (
+                {showDropdown && (
                   <div className="custom-dropdown">
                     {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
                       <div
                         key={idx}
                         className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
                         onClick={() => {
-                          _setSelectedYear(year);
+                          setSelectedYear(year);
                           setShowDropdown(false);
                         }}
                       >
@@ -209,10 +194,7 @@ const Revenue: React.FC = () => {
 
               <button
                 className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
-                onClick={() => {
-                  _setViewMode("year");
-                  setShowDropdown(false);
-                }}
+                onClick={() => setViewMode("year")}
               >
                 <span className="circle-indicator" />
                 <span className="pill-label">Year Wise</span>
@@ -257,7 +239,7 @@ const Revenue: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              readOnly={stressTestingActive || !isManager} // ✅ block if not manager
+                              readOnly={stressTestingActive || !isManager}
                               style={
                                 stressTestingActive || !isManager
                                   ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
@@ -266,7 +248,7 @@ const Revenue: React.FC = () => {
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
-                                setSheetData((prev) => ({
+                                setSheetData((prev: any) => ({
                                   ...prev,
                                   [metric.label]: {
                                     ...prev[metric.label],
@@ -285,9 +267,7 @@ const Revenue: React.FC = () => {
                               }}
                               onKeyDown={(e) => {
                                 if (stressTestingActive || !isManager) return;
-                                if (e.key === "Enter") {
-                                  e.currentTarget.blur();
-                                }
+                                if (e.key === "Enter") e.currentTarget.blur();
                               }}
                             />
                           ) : (
