@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
-import { RoleContext } from "../App"; // ✅ import RoleContext
+import { RoleContext } from "../App";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const yearsList = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -15,34 +15,28 @@ const valuationMetrics = [
   { label: "Customer-based Valuation", type: "auto" }
 ];
 
-const Valuation: React.FC = () => {
-  const { isManager } = useContext(RoleContext); // ✅ only managers can edit
+interface ValuationProps {
+  stressTestData: any;
+}
+
+const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
+  const { isManager } = useContext(RoleContext);
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [stressTestingActive, setStressTestingActive] = useState(false);
 
-  const [sheetData, setSheetData] = useState<
-    Record<string, Record<string, { value: number; is_calculated: boolean }>>
-  >({});
-
+  const [sheetData, setSheetData] = useState<any>({});
   const sheetType = "valuation";
 
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
 
   const getDisplayedPeriods = () => {
-    if (viewMode === "quarter") {
-      return quarters.map((q, i) => ({
-        label: q,
-        key: getQuarterKey(selectedYear, i),
-      }));
-    }
-    return yearsList.map((_year, i) => ({
-      label: `Y${i + 1}`,
-      key: `Y${i + 1}Q4`,
-    }));
+    return viewMode === "quarter"
+      ? quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }))
+      : yearsList.map((_year, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
   };
 
   useEffect(() => {
@@ -57,41 +51,24 @@ const Valuation: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const yearNum = selectedYear.replace("Year ", "");
-      try {
-        if (stressTestingActive) {
-          const defaultPayload = {
-            start_year: 0,
-            start_quarter: 0,
-            customer_drop_percentage: 0,
-            pricing_pressure_percentage: 0,
-            cac_increase_percentage: 0,
-            is_technology_failure: false,
-            interest_rate_shock: 0,
-            market_entry_underperformance_percentage: 0,
-            is_economic_recession: false
-          };
-          const response = await fetch("http://localhost:8000/api/stress-test", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(defaultPayload),
-          });
-          const data = await response.json();
-          if (data && data[sheetType]) setSheetData(data[sheetType]);
-        } else {
+      if (stressTestingActive && stressTestData) {
+        setSheetData(stressTestData[sheetType]);
+      } else {
+        try {
+          const yearNum = selectedYear.replace("Year ", "");
           const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
           const data = await res.json();
           setSheetData(data);
+        } catch (err) {
+          console.error("Error fetching valuation data:", err);
         }
-      } catch (err) {
-        console.error("Error fetching valuation data:", err);
       }
     };
     fetchData();
-  }, [selectedYear, stressTestingActive]);
+  }, [selectedYear, stressTestingActive, stressTestData]);
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
-    if (stressTestingActive || !isManager) return; // ✅ only managers can edit
+    if (stressTestingActive || !isManager) return;
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
       const res = await fetch("http://localhost:8000/api/update-cell", {
@@ -103,7 +80,7 @@ const Valuation: React.FC = () => {
           field_name: fieldName,
           year_num: yearNum,
           quarter_num: quarterIdx + 1,
-          value: value,
+          value,
         }),
       });
       const result = await res.json();
@@ -129,14 +106,15 @@ const Valuation: React.FC = () => {
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
-                {!isManager&&(<button
-                className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
-                onClick={() => setStressTestingActive(prev => !prev)}
-              >
-                <span className="circle-indicator" />
-                <span className="pill-label">Stress Testing</span>
-              </button>)}
-
+              {!isManager && (
+                <button
+                  className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
+                  onClick={() => setStressTestingActive(prev => !prev)}
+                >
+                  <span className="circle-indicator" />
+                  <span className="pill-label">Stress Testing</span>
+                </button>
+              )}
 
               <div className="position-relative" ref={dropdownRef}>
                 <button
@@ -171,10 +149,7 @@ const Valuation: React.FC = () => {
 
               <button
                 className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
-                onClick={() => {
-                  setViewMode("year");
-                  setShowDropdown(false);
-                }}
+                onClick={() => setViewMode("year")}
               >
                 <span className="circle-indicator" />
                 <span className="pill-label">Year Wise</span>
@@ -218,12 +193,12 @@ const Valuation: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              readOnly={stressTestingActive || !isManager} // ✅ manager-only
+                              readOnly={stressTestingActive || !isManager}
                               style={stressTestingActive || !isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
-                                setSheetData(prev => ({
+                                setSheetData((prev: any) => ({
                                   ...prev,
                                   [metric.label]: {
                                     ...prev[metric.label],
@@ -236,13 +211,10 @@ const Valuation: React.FC = () => {
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (stressTestingActive || !isManager) return;
-                                const newValue = parseFloat(e.target.value) || 0;
-                                updateCellAPI(metric.label, qIdx, newValue);
+                                if (!stressTestingActive && isManager) updateCellAPI(metric.label, qIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
-                                if (stressTestingActive || !isManager) return;
-                                if (e.key === "Enter") e.currentTarget.blur();
+                                if (!stressTestingActive && isManager && e.key === "Enter") e.currentTarget.blur();
                               }}
                             />
                           ) : (

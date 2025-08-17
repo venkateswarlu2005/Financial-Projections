@@ -44,16 +44,16 @@ function App() {
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/revenue" element={<Revenue stressTestData={stressTestData} />} />
-                  <Route path="/unit-economics" element={<UnitEconomics />} />
-                  <Route path="/growth" element={<Growth />} />
-                  <Route path="/opex" element={<OpEx />} />
-                  <Route path="/salaries" element={<Salaries />} />
-                  <Route path="/capex" element={<CapEx />} />
+                  <Route path="/unit-economics" element={<UnitEconomics stressTestData={stressTestData} />} />
+                  <Route path="/growth" element={<Growth stressTestData={stressTestData}/>} />
+                  <Route path="/opex" element={<OpEx stressTestData={stressTestData} />} />
+                  <Route path="/salaries" element={<Salaries stressTestData={stressTestData} />} />
+                  <Route path="/capex" element={<CapEx stressTestData={stressTestData}/>} />
                   <Route path="/M&A" element={<GTM />} />
-                  <Route path="/valuation" element={<Valuation />} />
+                  <Route path="/valuation" element={<Valuation stressTestData={stressTestData}/>} />
                   <Route path="/stress-testing" element={<StressTesting setStressTestData={setStressTestData} />} />
                   <Route path="/scenario-analysis" element={<ScenarioAnalysis />} />
-                  <Route path="/PnL-Statement" element={<Financial />} />
+                  <Route path="/PnL-Statement" element={<Financial stressTestData={stressTestData} />} />
                   <Route path="*" element={<Navigate to="/dashboard" />} />
                 </Routes>
               </div>

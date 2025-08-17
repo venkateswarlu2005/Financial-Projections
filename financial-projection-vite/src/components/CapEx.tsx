@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import "./Revenue.css"; 
 import { BsInfoCircleFill } from "react-icons/bs";
-import { RoleContext } from "../App"; // ✅ import RoleContext
+import { RoleContext } from "../App";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
@@ -14,35 +14,27 @@ const growthMetrics = [
   { name: "Total Assets Value", type: "calculated" }
 ];
 
-const CapEx: React.FC = () => {
-  const { isManager } = useContext(RoleContext); // ✅ only managers can edit
+interface CapExProps {
+  stressTestData: any;
+}
+
+const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
+  const { isManager } = useContext(RoleContext);
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const [stressTestingActive, setStressTestingActive] = useState(false);
-
-  const [sheetData, setSheetData] = useState<
-    Record<string, Record<string, { value: number; is_calculated: boolean }>>
-  >({});
-
+  const [sheetData, setSheetData] = useState<any>({});
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const sheetType = "capex";
 
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
 
   const getDisplayedQuarters = () => {
-    if (viewMode === "quarter") {
-      return quarters.map((q, i) => ({
-        label: q,
-        key: getQuarterKey(selectedYear, i),
-      }));
-    } else {
-      return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((_year, i) => ({
-        label: `Y${i + 1}`,
-        key: `Y${i + 1}Q4`,
-      }));
-    }
+    return viewMode === "quarter"
+      ? quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }))
+      : ["Year 1","Year 2","Year 3","Year 4","Year 5"].map((_y,i)=>({ label:`Y${i+1}`, key:`Y${i+1}Q4` }));
   };
 
   useEffect(() => {
@@ -57,41 +49,24 @@ const CapEx: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const yearNum = selectedYear.replace("Year ", "");
-      try {
-        if (stressTestingActive) {
-          const defaultPayload = {
-            start_year: 0,
-            start_quarter: 0,
-            customer_drop_percentage: 0,
-            pricing_pressure_percentage: 0,
-            cac_increase_percentage: 0,
-            is_technology_failure: false,
-            interest_rate_shock: 0,
-            market_entry_underperformance_percentage: 0,
-            is_economic_recession: false
-          };
-          const response = await fetch("http://localhost:8000/api/stress-test", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(defaultPayload),
-          });
-          const data = await response.json();
-          if (data && data[sheetType]) setSheetData(data[sheetType]);
-        } else {
+      if (stressTestingActive && stressTestData) {
+        setSheetData(stressTestData[sheetType]);
+      } else {
+        try {
+          const yearNum = selectedYear.replace("Year ", "");
           const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
           const data = await response.json();
           setSheetData(data);
+        } catch (error) {
+          console.error("Error fetching sheet data:", error);
         }
-      } catch (error) {
-        console.error("Error fetching sheet data:", error);
       }
     };
     fetchData();
-  }, [selectedYear, stressTestingActive]);
+  }, [selectedYear, stressTestingActive, stressTestData]);
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
-    if (stressTestingActive || !isManager) return; // ✅ only managers can edit
+    if (stressTestingActive || !isManager) return;
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
       const response = await fetch("http://localhost:8000/api/update-cell", {
@@ -103,7 +78,7 @@ const CapEx: React.FC = () => {
           field_name: fieldName,
           year_num: yearNum,
           quarter_num: quarterIdx + 1,
-          value: value,
+          value,
         }),
       });
       const result = await response.json();
@@ -129,14 +104,15 @@ const CapEx: React.FC = () => {
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
-                {!isManager&&(<button
-                className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
-                onClick={() => setStressTestingActive(prev => !prev)}
-              >
-                <span className="circle-indicator" />
-                <span className="pill-label">Stress Testing</span>
-              </button>)}
-
+              {!isManager && (
+                <button
+                  className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
+                  onClick={() => setStressTestingActive(prev => !prev)}
+                >
+                  <span className="circle-indicator" />
+                  <span className="pill-label">Stress Testing</span>
+                </button>
+              )}
 
               <div className="position-relative" ref={dropdownRef}>
                 <button
@@ -152,7 +128,7 @@ const CapEx: React.FC = () => {
 
                 {showDropdown && (
                   <div className="custom-dropdown">
-                    {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
+                    {["Year 1","Year 2","Year 3","Year 4","Year 5"].map((year, idx) => (
                       <div
                         key={idx}
                         className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
@@ -171,10 +147,7 @@ const CapEx: React.FC = () => {
 
               <button
                 className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
-                onClick={() => {
-                  setViewMode("year");
-                  setShowDropdown(false);
-                }}
+                onClick={() => setViewMode("year")}
               >
                 <span className="circle-indicator" />
                 <span className="pill-label">Year Wise</span>
@@ -195,7 +168,6 @@ const CapEx: React.FC = () => {
                 ))}
               </tr>
             </thead>
-
             <tbody>
               {growthMetrics.map((metric, idx) => (
                 <React.Fragment key={idx}>
@@ -206,12 +178,10 @@ const CapEx: React.FC = () => {
                         {metric.type === "cumulative" ? "Input" : "Auto"}
                       </div>
                     </td>
-
                     {getDisplayedQuarters().map((q, qIdx) => {
                       const metricData = sheetData?.[metric.name]?.[q.key];
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
-
                       return (
                         <td key={qIdx}>
                           {metric.type === "cumulative" && !isCalculated && viewMode === "quarter" ? (
@@ -219,12 +189,12 @@ const CapEx: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              readOnly={stressTestingActive || !isManager} // ✅ block if not manager
+                              readOnly={stressTestingActive || !isManager}
                               style={stressTestingActive || !isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
-                                setSheetData(prev => ({
+                                setSheetData((prev: any) => ({
                                   ...prev,
                                   [metric.name]: {
                                     ...prev[metric.name],
@@ -237,13 +207,10 @@ const CapEx: React.FC = () => {
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (stressTestingActive || !isManager) return;
-                                const newValue = parseFloat(e.target.value) || 0;
-                                updateCellAPI(metric.name, qIdx, newValue);
+                                if (!stressTestingActive && isManager) updateCellAPI(metric.name, qIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
-                                if (stressTestingActive || !isManager) return;
-                                if (e.key === "Enter") e.currentTarget.blur();
+                                if (!stressTestingActive && isManager && e.key === "Enter") e.currentTarget.blur();
                               }}
                             />
                           ) : (
@@ -253,12 +220,7 @@ const CapEx: React.FC = () => {
                       );
                     })}
                   </tr>
-
-                  {metric.addGapAfter && (
-                    <tr className="gap-row">
-                      <td colSpan={quarters.length + 1}></td>
-                    </tr>
-                  )}
+                  {metric.addGapAfter && <tr className="gap-row"><td colSpan={quarters.length + 1}></td></tr>}
                 </React.Fragment>
               ))}
             </tbody>

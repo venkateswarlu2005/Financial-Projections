@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
-import { RoleContext } from "../App"; // ✅ import role context
+import { RoleContext } from "../App";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -31,23 +31,24 @@ const techOpex = [
   { name: "Office Supplies", type: "input" },
   { name: "Travel", type: "input", afterGap: true },
 
-  { name: "Inflation Adjustment (%)", type: "calculated" },
-  { name: "Surprise Costs", type: "calculated" },
-  { name: "Total", type: "calculated" }
+  { name: "Inflation Adjustment (%)", type: "auto" },
+  { name: "Surprise Costs", type: "auto" },
+  { name: "Total", type: "auto" }
 ];
 
-const OpEx: React.FC = () => {
-  const { isManager } = useContext(RoleContext); // ✅ get role
+interface OpExProps {
+  stressTestData: any;
+}
+
+const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
+  const { isManager } = useContext(RoleContext);
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [stressTestingActive, setStressTestingActive] = useState(false);
 
-  const [sheetData, setSheetData] = useState<
-    Record<string, Record<string, { value: number; is_calculated: boolean }>>
-  >({});
-
+  const [sheetData, setSheetData] = useState<any>({});
   const sheetType = "tech-opex";
 
   const getQuarterKey = (year: string, quarterIdx: number) =>
@@ -68,43 +69,38 @@ const OpEx: React.FC = () => {
   };
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
     const fetchData = async () => {
-      const yearNum = selectedYear.replace("Year ", "");
-      try {
-        if (stressTestingActive) {
-          const defaultPayload = {
-            start_year: null,
-            start_quarter: null,
-            customer_drop_percentage: 0,
-            pricing_pressure_percentage: 0,
-            cac_increase_percentage: 0,
-            is_technology_failure: false,
-            interest_rate_shock: 0,
-            market_entry_underperformance_percentage: 0,
-            is_economic_recession: false
-          };
-          const response = await fetch("http://localhost:8000/api/stress-test", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(defaultPayload),
-          });
-          const data = await response.json();
-          if (data && data[sheetType]) setSheetData(data[sheetType]);
-        } else {
-          const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+      if (stressTestingActive && stressTestData) {
+        setSheetData(stressTestData[sheetType]);
+      } else {
+        try {
+          const yearNum = selectedYear.replace("Year ", "");
+          const response = await fetch(
+            `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`
+          );
           const data = await response.json();
           setSheetData(data);
+        } catch (error) {
+          console.error("Error fetching sheet data:", error);
         }
-      } catch (error) {
-        console.error("Error fetching sheet data:", error);
       }
     };
 
     fetchData();
-  }, [selectedYear, stressTestingActive]);
+  }, [selectedYear, stressTestingActive, stressTestData]);
 
   const updateCellAPI = async (fieldName: string, periodIdx: number, value: number) => {
-    if (stressTestingActive || !isManager) return; // ✅ block if not manager
+    if (stressTestingActive || !isManager) return;
 
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
@@ -123,7 +119,9 @@ const OpEx: React.FC = () => {
 
       const result = await response.json();
       if (response.ok && result.status === "success") {
-        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const updated = await fetch(
+          `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`
+        );
         const updatedData = await updated.json();
         setSheetData(updatedData);
       } else {
@@ -144,14 +142,15 @@ const OpEx: React.FC = () => {
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
-              {!isManager&&(<button
-                className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
-                onClick={() => setStressTestingActive(prev => !prev)}
-              >
-                <span className="circle-indicator" />
-                <span className="pill-label">Stress Testing</span>
-              </button>)}
-
+              {!isManager && (
+                <button
+                  className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
+                  onClick={() => setStressTestingActive(prev => !prev)}
+                >
+                  <span className="circle-indicator" />
+                  <span className="pill-label">Stress Testing</span>
+                </button>
+              )}
 
               <div className="position-relative" ref={dropdownRef}>
                 <button
@@ -232,7 +231,7 @@ const OpEx: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              readOnly={stressTestingActive || !isManager} // ✅ block if not manager
+                              readOnly={stressTestingActive || !isManager}
                               style={
                                 stressTestingActive || !isManager
                                   ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
@@ -241,7 +240,7 @@ const OpEx: React.FC = () => {
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
-                                setSheetData(prev => ({
+                                setSheetData((prev: { [x: string]: { [x: string]: any; }; }) => ({
                                   ...prev,
                                   [metric.name]: {
                                     ...prev[metric.name],

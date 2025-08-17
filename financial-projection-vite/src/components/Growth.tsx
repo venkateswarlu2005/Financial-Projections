@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import "./Revenue.css"; // Reuse Revenue styles
 import { BsInfoCircleFill } from "react-icons/bs";
-import { RoleContext } from "../App"; // ✅ import role context
+import { RoleContext } from "../App";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
@@ -14,7 +14,6 @@ const growthMetrics = [
 
   { label: "Social Media Campaigns (Strategy & Design Spends)", type: "input" },
   { label: "Average Reach from Social Campaigns", type: "input", addGapAfter: true },
-
   { label: "ATL Campaigns Spends", type: "input" },
   { label: "Average Reach from ATL", type: "input", addGapAfter: true },
 
@@ -35,17 +34,18 @@ const growthMetrics = [
   { label: "Cost of Customer Acquisition", type: "auto" }
 ];
 
-const Growth: React.FC = () => {
-  const { isManager } = useContext(RoleContext); // ✅ get role
+interface GrowthProps {
+  stressTestData: any;
+}
+
+const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
+  const { isManager } = useContext(RoleContext);
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const [sheetData, setSheetData] = useState<
-    Record<string, Record<string, { value: number; is_calculated: boolean }>>
-  >({});
-
+  const [sheetData, setSheetData] = useState<any>({});
   const [loadingAI, setLoadingAI] = useState(false);
   const [stressTestingActive, setStressTestingActive] = useState(false);
 
@@ -61,7 +61,7 @@ const Growth: React.FC = () => {
         key: getQuarterKey(selectedYear, i),
       }));
     } else {
-      return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((_year, i) => ({
+      return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((_y, i) => ({
         label: `Y${i + 1}`,
         key: `Y${i + 1}Q4`,
       }));
@@ -79,45 +79,26 @@ const Growth: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fetchSheetData = async () => {
-    const yearNum = selectedYear.replace("Year ", "");
-    try {
-      if (stressTestingActive) {
-        const defaultPayload = {
-          start_year: 0,
-          start_quarter: 0,
-          customer_drop_percentage: 0,
-          pricing_pressure_percentage: 0,
-          cac_increase_percentage: 0,
-          is_technology_failure: false,
-          interest_rate_shock: 0,
-          market_entry_underperformance_percentage: 0,
-          is_economic_recession: false
-        };
-        const response = await fetch("http://localhost:8000/api/stress-test", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(defaultPayload),
-        });
-        const data = await response.json();
-        if (data && data[sheetType]) setSheetData(data[sheetType]);
-      } else {
-        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const data = await response.json();
-        setSheetData(data);
-      }
-    } catch (error) {
-      console.error("Error fetching sheet data:", error);
-    }
-  };
-
   useEffect(() => {
-    fetchSheetData();
-  }, [selectedYear, stressTestingActive]);
+    const fetchData = async () => {
+      if (stressTestingActive && stressTestData) {
+        setSheetData(stressTestData[sheetType]);
+      } else {
+        try {
+          const yearNum = selectedYear.replace("Year ", "");
+          const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+          const data = await response.json();
+          setSheetData(data);
+        } catch (err) {
+          console.error("Error fetching sheet data:", err);
+        }
+      }
+    };
+    fetchData();
+  }, [selectedYear, stressTestingActive, stressTestData]);
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
-    if (stressTestingActive || !isManager) return; // ✅ block updates if not manager
-
+    if (stressTestingActive || !isManager) return;
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
       const response = await fetch("http://localhost:8000/api/update-cell", {
@@ -129,14 +110,16 @@ const Growth: React.FC = () => {
           field_name: fieldName,
           year_num: yearNum,
           quarter_num: quarterIdx + 1,
-          value: value,
+          value,
         }),
       });
 
       const result = await response.json();
 
       if (response.ok && result.status === "success") {
-        await fetchSheetData();
+        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const updatedData = await updated.json();
+        setSheetData(updatedData);
       } else {
         console.error("Error updating cell:", result.message);
       }
@@ -152,17 +135,12 @@ const Growth: React.FC = () => {
       const response = await fetch("http://localhost:8000/api/auto-populate-reach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          company_id: 1,
-          year: yearNum,
-        }),
+        body: JSON.stringify({ company_id: 1, year: yearNum }),
       });
 
       const data = await response.json();
-
       if (response.ok && data.status === "success") {
-        console.log("AI suggestions applied successfully");
-        await fetchSheetData();
+        await fetchData();
       } else {
         console.error("AI suggestion failed:", data.message);
       }
@@ -183,24 +161,23 @@ const Growth: React.FC = () => {
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
-                {!isManager&&(<button
-                className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
-                onClick={() => setStressTestingActive(prev => !prev)}
-              >
-                <span className="circle-indicator" />
-                <span className="pill-label">Stress Testing</span>
-              </button>)}
+              {!isManager && (
+                <button
+                  className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
+                  onClick={() => setStressTestingActive(prev => !prev)}
+                >
+                  <span className="circle-indicator" />
+                  <span className="pill-label">Stress Testing</span>
+                </button>
+              )}
 
               <div className="position-relative" ref={dropdownRef}>
                 <button
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
-                  onClick={() => {
-                    setViewMode("quarter");
-                    setShowDropdown((prev) => !prev);
-                  }}
+                  onClick={() => { setViewMode("quarter"); setShowDropdown(prev => !prev); }}
                 >
                   <span className="circle-indicator" />
-                  <span className="pill-label">Quarter Wise</span>           
+                  <span className="pill-label">Quarter Wise</span>
                 </button>
 
                 {showDropdown && (
@@ -209,10 +186,7 @@ const Growth: React.FC = () => {
                       <div
                         key={idx}
                         className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
-                        onClick={() => {
-                          setSelectedYear(year);
-                          setShowDropdown(false);
-                        }}
+                        onClick={() => { setSelectedYear(year); setShowDropdown(false); }}
                       >
                         <span className={`radio-circle ${selectedYear === year ? "filled" : ""}`} />
                         {year}
@@ -224,16 +198,12 @@ const Growth: React.FC = () => {
 
               <button
                 className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
-                onClick={() => {
-                  setViewMode("year");
-                  setShowDropdown(false);
-                }}
+                onClick={() => { setViewMode("year"); setShowDropdown(false); }}
               >
                 <span className="circle-indicator" />
                 <span className="pill-label">Year Wise</span>
               </button>
 
-              {/* AI Suggestions Button */}
               <button
                 className="pill-toggle-btn no-dot"
                 onClick={getAIReachSuggestions}
@@ -283,16 +253,12 @@ const Growth: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              readOnly={stressTestingActive || !isManager} // ✅ block if not manager
-                              style={
-                                stressTestingActive || !isManager
-                                  ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
-                                  : {}
-                              }
+                              readOnly={stressTestingActive || !isManager}
+                              style={stressTestingActive || !isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
-                                setSheetData((prev) => ({
+                                setSheetData((prev: any) => ({
                                   ...prev,
                                   [metric.label]: {
                                     ...prev[metric.label],
@@ -306,12 +272,10 @@ const Growth: React.FC = () => {
                               }}
                               onBlur={(e) => {
                                 if (stressTestingActive || !isManager) return;
-                                const newValue = parseFloat(e.target.value) || 0;
-                                updateCellAPI(metric.label, qIdx, newValue);
+                                updateCellAPI(metric.label, qIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
-                                if (stressTestingActive || !isManager) return;
-                                if (e.key === "Enter") {
+                                if (!stressTestingActive && isManager && e.key === "Enter") {
                                   e.currentTarget.blur();
                                 }
                               }}
@@ -323,11 +287,9 @@ const Growth: React.FC = () => {
                       );
                     })}
                   </tr>
-
+                  
                   {metric.addGapAfter && (
-                    <tr className="gap-row">
-                      <td colSpan={quarters.length + 1}></td>
-                    </tr>
+                    <tr className="gap-row"><td colSpan={quarters.length + 1}></td></tr>
                   )}
                 </React.Fragment>
               ))}
@@ -340,3 +302,7 @@ const Growth: React.FC = () => {
 };
 
 export default Growth;
+function fetchData() {
+  throw new Error("Function not implemented.");
+}
+
