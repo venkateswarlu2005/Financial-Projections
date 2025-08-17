@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import "./GTM.css";
+import { RoleContext } from "../App"; // ✅ Import RoleContext
 
 // --- Types ---
 interface QuarterData {
@@ -26,6 +27,7 @@ interface AcquisitionCardProps {
     count: number,
     amount_per_acquisition: number
   ) => void;
+  isManager: boolean; // ✅ manager-only prop
 }
 
 // --- Card Component ---
@@ -36,6 +38,7 @@ const AcquisitionCard: React.FC<AcquisitionCardProps> = ({
   borderClass,
   headerClass,
   onUpdate,
+  isManager, // ✅ manager-only
 }) => {
   const quarters = ["Y1Q1", "Y1Q2", "Y1Q3", "Y1Q4"];
 
@@ -53,7 +56,10 @@ const AcquisitionCard: React.FC<AcquisitionCardProps> = ({
               <input
                 type="number"
                 value={countVal}
+                readOnly={!isManager} // ✅ editable only for managers
+                style={!isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
                 onChange={(e) => {
+                  if (!isManager) return;
                   const newCount = Number(e.target.value);
                   onUpdate(acquisitionKey, 1, index + 1, newCount, amountVal);
                 }}
@@ -63,7 +69,10 @@ const AcquisitionCard: React.FC<AcquisitionCardProps> = ({
                 type="number"
                 className="amount-input"
                 value={amountVal}
+                readOnly={!isManager} // ✅ editable only for managers
+                style={!isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
                 onChange={(e) => {
+                  if (!isManager) return;
                   const newAmount = Number(e.target.value);
                   onUpdate(acquisitionKey, 1, index + 1, countVal, newAmount);
                 }}
@@ -78,6 +87,7 @@ const AcquisitionCard: React.FC<AcquisitionCardProps> = ({
 
 // --- Main Component ---
 const GTM: React.FC = () => {
+  const { isManager } = useContext(RoleContext); // ✅ role check
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [apiData, setApiData] = useState<ApiData>({});
   const [showDropdown, setShowDropdown] = useState(false);
@@ -107,6 +117,8 @@ const GTM: React.FC = () => {
     newCount: number,
     newAmount: number
   ) => {
+    if (!isManager) return; // ✅ only managers can update
+
     setApiData((prev) => {
       const updated = { ...prev };
       const quarterKey = `Y${year_num}Q${quarter_num}`;
@@ -193,6 +205,7 @@ const GTM: React.FC = () => {
               headerClass="bg-revenue"
               data={apiData["Full Broking House"] || {}}
               onUpdate={handleUpdate}
+              isManager={isManager} // ✅ pass role
             />
           </div>
 
@@ -204,6 +217,7 @@ const GTM: React.FC = () => {
               headerClass="bg-customer"
               data={apiData["GOP Based Broker Deals"] || {}}
               onUpdate={handleUpdate}
+              isManager={isManager} // ✅ pass role
             />
           </div>
 
@@ -215,6 +229,7 @@ const GTM: React.FC = () => {
               headerClass="bg-ratio"
               data={apiData["Secondary Market Acquisitions"] || {}}
               onUpdate={handleUpdate}
+              isManager={isManager} // ✅ pass role
             />
           </div>
         </div>

@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
-import "./Revenue.css"; // Reuse styles
+import React, { useState, useRef, useEffect, useContext } from "react";
+import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
+import { RoleContext } from "../App"; // ✅ Import RoleContext
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const yearsList = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -17,6 +18,7 @@ const metricItems = [
 ];
 
 const UnitEconomics: React.FC = () => {
+  const { isManager } = useContext(RoleContext); // ✅ only managers can edit
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -30,71 +32,60 @@ const UnitEconomics: React.FC = () => {
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
 
   const getDisplayedQuarters = () => {
-    if (viewMode === "quarter") {
-      return quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }));
-    }
-    return yearsList.map((year, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
+    if (viewMode === "quarter") return quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }));
+    return yearsList.map((_year, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
   };
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setShowDropdown(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch data (all years or stress test)
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      if (stressTestingActive) {
-        // Send empty/default values for stress test
-        const defaultPayload = {
-          start_year: 0,
-          start_quarter: 0,
-          customer_drop_percentage: 0,
-          pricing_pressure_percentage: 0,
-          cac_increase_percentage: 0,
-          is_technology_failure: false,
-          interest_rate_shock: 0,
-          market_entry_underperformance_percentage: 0,
-          is_economic_recession: false
-        };
-
-        const res = await fetch("http://localhost:8000/api/stress-test", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(defaultPayload),
-        });
-
-        const data = await res.json();
-        if (data && data[sheetType]) setSheetData(data[sheetType]);
-      } else {
-        // Regular data fetch for all years
-        let combined: Record<string, any> = {};
-        for (let y = 1; y <= 5; y++) {
-          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${y}`);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (stressTestingActive) {
+          const defaultPayload = {
+            start_year: 0,
+            start_quarter: 0,
+            customer_drop_percentage: 0,
+            pricing_pressure_percentage: 0,
+            cac_increase_percentage: 0,
+            is_technology_failure: false,
+            interest_rate_shock: 0,
+            market_entry_underperformance_percentage: 0,
+            is_economic_recession: false
+          };
+          const res = await fetch("http://localhost:8000/api/stress-test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(defaultPayload),
+          });
           const data = await res.json();
-          for (const metric in data) {
-            combined[metric] = { ...(combined[metric] || {}), ...data[metric] };
+          if (data && data[sheetType]) setSheetData(data[sheetType]);
+        } else {
+          let combined: Record<string, any> = {};
+          for (let y = 1; y <= 5; y++) {
+            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${y}`);
+            const data = await res.json();
+            for (const metric in data) {
+              combined[metric] = { ...(combined[metric] || {}), ...data[metric] };
+            }
           }
+          setSheetData(combined);
         }
-        setSheetData(combined);
+      } catch (err) {
+        console.error("Error fetching unit economics data:", err);
       }
-    } catch (err) {
-      console.error("Error fetching unit economics data:", err);
-    }
-  };
-  fetchData();
-}, [stressTestingActive]);
-
+    };
+    fetchData();
+  }, [stressTestingActive]);
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
-    if (stressTestingActive) return;
+    if (stressTestingActive || !isManager) return; // ✅ manager-only editing
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
       const res = await fetch("http://localhost:8000/api/update-cell", {
@@ -227,10 +218,10 @@ useEffect(() => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              readOnly={stressTestingActive}
-                              style={stressTestingActive ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              readOnly={stressTestingActive || !isManager} // ✅ manager-only editing
+                              style={stressTestingActive || !isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
                               onChange={(e) => {
-                                if (stressTestingActive) return;
+                                if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
                                 setSheetData(prev => ({
                                   ...prev,
@@ -245,12 +236,12 @@ useEffect(() => {
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (stressTestingActive) return;
+                                if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
                                 updateCellAPI(metric.label, qIdx, newValue);
                               }}
                               onKeyDown={(e) => {
-                                if (stressTestingActive) return;
+                                if (stressTestingActive || !isManager) return;
                                 if (e.key === "Enter") e.currentTarget.blur();
                               }}
                             />

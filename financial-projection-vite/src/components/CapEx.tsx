@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
-import "./Revenue.css"; // Reuse styles
+import React, { useState, useRef, useEffect, useContext } from "react";
+import "./Revenue.css"; 
 import { BsInfoCircleFill } from "react-icons/bs";
+import { RoleContext } from "../App"; // ✅ import RoleContext
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
@@ -14,6 +15,7 @@ const growthMetrics = [
 ];
 
 const CapEx: React.FC = () => {
+  const { isManager } = useContext(RoleContext); // ✅ only managers can edit
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -59,29 +61,24 @@ const CapEx: React.FC = () => {
       try {
         if (stressTestingActive) {
           const defaultPayload = {
-           start_year: 0,
-           start_quarter: 0,
-           customer_drop_percentage: 0,
-           pricing_pressure_percentage: 0,
-           cac_increase_percentage: 0,
-           is_technology_failure: false,
-           interest_rate_shock: 0,
-           market_entry_underperformance_percentage: 0,
-           is_economic_recession: false
-         };
+            start_year: 0,
+            start_quarter: 0,
+            customer_drop_percentage: 0,
+            pricing_pressure_percentage: 0,
+            cac_increase_percentage: 0,
+            is_technology_failure: false,
+            interest_rate_shock: 0,
+            market_entry_underperformance_percentage: 0,
+            is_economic_recession: false
+          };
           const response = await fetch("http://localhost:8000/api/stress-test", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(defaultPayload),
           });
           const data = await response.json();
-          if (data && data[sheetType]) {
-            setSheetData(data[sheetType]);
-          } else {
-            console.error(`No data found for sheet type: ${sheetType}`);
-          }
+          if (data && data[sheetType]) setSheetData(data[sheetType]);
         } else {
-          // Normal mode fetch
           const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
           const data = await response.json();
           setSheetData(data);
@@ -93,9 +90,8 @@ const CapEx: React.FC = () => {
     fetchData();
   }, [selectedYear, stressTestingActive]);
 
-  // API call to update data (disabled in stress testing mode)
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
-    if (stressTestingActive) return; // Prevent updates in stress mode
+    if (stressTestingActive || !isManager) return; // ✅ only managers can edit
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
       const response = await fetch("http://localhost:8000/api/update-cell", {
@@ -222,10 +218,10 @@ const CapEx: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              readOnly={stressTestingActive}
-                              style={stressTestingActive ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              readOnly={stressTestingActive || !isManager} // ✅ block if not manager
+                              style={stressTestingActive || !isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
                               onChange={(e) => {
-                                if (stressTestingActive) return;
+                                if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
                                 setSheetData(prev => ({
                                   ...prev,
@@ -240,12 +236,12 @@ const CapEx: React.FC = () => {
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (stressTestingActive) return;
+                                if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
                                 updateCellAPI(metric.name, qIdx, newValue);
                               }}
                               onKeyDown={(e) => {
-                                if (stressTestingActive) return;
+                                if (stressTestingActive || !isManager) return;
                                 if (e.key === "Enter") e.currentTarget.blur();
                               }}
                             />

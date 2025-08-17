@@ -166,7 +166,61 @@ const Revenue: React.FC = () => {
               <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
 
-            {/* buttons remain same... */}
+                        <div className="d-flex gap-2 btn-group-pill-toggle">
+              <button
+                className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
+                onClick={() => _setStressTestingActive(prev => !prev)}
+              >
+                <span className="circle-indicator" />
+                <span className="pill-label">Stress Testing</span>
+              </button>
+
+              <div className="position-relative" ref={dropdownRef}>
+                <button
+                  className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
+                  onClick={() => {
+                    _setViewMode("quarter");
+                    setShowDropdown((prev) => !prev);
+                  }}
+                >
+                  <span className="circle-indicator" />
+                  <span className="pill-label">Quarter Wise</span>
+                </button>
+
+                {_showDropdown && (
+                  <div className="custom-dropdown">
+                    {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
+                      <div
+                        key={idx}
+                        className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
+                        onClick={() => {
+                          _setSelectedYear(year);
+                          setShowDropdown(false);
+                        }}
+                      >
+                        <span className={`radio-circle ${selectedYear === year ? "filled" : ""}`} />
+                        {year}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button
+                className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
+                onClick={() => {
+                  _setViewMode("year");
+                  setShowDropdown(false);
+                }}
+              >
+                <span className="circle-indicator" />
+                <span className="pill-label">Year Wise</span>
+              </button>
+
+              <button className="pill-toggle-btn no-dot">
+                <span className="pill-label">Download</span>
+              </button>
+            </div>
           </div>
 
           <table className="table table-borderless table-hover revenue-table">

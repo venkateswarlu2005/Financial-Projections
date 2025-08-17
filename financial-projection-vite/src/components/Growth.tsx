@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import "./Revenue.css"; // Reuse Revenue styles
 import { BsInfoCircleFill } from "react-icons/bs";
+import { RoleContext } from "../App"; // ✅ import role context
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
@@ -35,6 +36,7 @@ const growthMetrics = [
 ];
 
 const Growth: React.FC = () => {
+  const { isManager } = useContext(RoleContext); // ✅ get role
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -81,24 +83,23 @@ const Growth: React.FC = () => {
     const yearNum = selectedYear.replace("Year ", "");
     try {
       if (stressTestingActive) {
-         // Send empty/default values for stress test
-         const defaultPayload = {
-           start_year: 0,
-           start_quarter: 0,
-           customer_drop_percentage: 0,
-           pricing_pressure_percentage: 0,
-           cac_increase_percentage: 0,
-           is_technology_failure: false,
-           interest_rate_shock: 0,
-           market_entry_underperformance_percentage: 0,
-           is_economic_recession: false
-         };
-          const response = await fetch("http://localhost:8000/api/stress-test", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(defaultPayload),
-          });
-          const data = await response.json();
+        const defaultPayload = {
+          start_year: 0,
+          start_quarter: 0,
+          customer_drop_percentage: 0,
+          pricing_pressure_percentage: 0,
+          cac_increase_percentage: 0,
+          is_technology_failure: false,
+          interest_rate_shock: 0,
+          market_entry_underperformance_percentage: 0,
+          is_economic_recession: false
+        };
+        const response = await fetch("http://localhost:8000/api/stress-test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(defaultPayload),
+        });
+        const data = await response.json();
         if (data && data[sheetType]) setSheetData(data[sheetType]);
       } else {
         const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
@@ -114,9 +115,8 @@ const Growth: React.FC = () => {
     fetchSheetData();
   }, [selectedYear, stressTestingActive]);
 
-  // Update only on blur or Enter
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
-    if (stressTestingActive) return; // Prevent updates in stress mode
+    if (stressTestingActive || !isManager) return; // ✅ block updates if not manager
 
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
@@ -284,10 +284,14 @@ const Growth: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              readOnly={stressTestingActive}
-                              style={stressTestingActive ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              readOnly={stressTestingActive || !isManager} // ✅ block if not manager
+                              style={
+                                stressTestingActive || !isManager
+                                  ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+                                  : {}
+                              }
                               onChange={(e) => {
-                                if (stressTestingActive) return;
+                                if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
                                 setSheetData((prev) => ({
                                   ...prev,
@@ -302,12 +306,12 @@ const Growth: React.FC = () => {
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (stressTestingActive) return;
+                                if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
                                 updateCellAPI(metric.label, qIdx, newValue);
                               }}
                               onKeyDown={(e) => {
-                                if (stressTestingActive) return;
+                                if (stressTestingActive || !isManager) return;
                                 if (e.key === "Enter") {
                                   e.currentTarget.blur();
                                 }

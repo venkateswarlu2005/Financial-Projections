@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import { BsInfoCircleFill } from "react-icons/bs";
 import "./Revenue.css";
+import { RoleContext } from "../App"; // ✅ import RoleContext
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -85,11 +86,12 @@ const Metrics = [
   { name: "Support Executives Count", type: "input" },
   { name: "Support Executives Average Salary", type: "input" },
   { name: "Support Staff Cost", type: "calculated", addGapAfter: true },
-
+  
   { name: "Total Salary Cost", type: "calculated" }
 ];
 
 const Salaries: React.FC = () => {
+  const { isManager } = useContext(RoleContext); // ✅ only managers can edit
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -129,54 +131,47 @@ const Salaries: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-useEffect(() => {
-  const fetchData = async () => {
-    const yearNum = selectedYear.replace("Year ", "");
+  useEffect(() => {
+    const fetchData = async () => {
+      const yearNum = selectedYear.replace("Year ", "");
 
-    try {
-      if (stressTestingActive) {
-        // Send empty/default payload for stress test
-        const defaultPayload = {
-          start_year: null,
-          start_quarter: null,
-          customer_drop_percentage: 0,
-          pricing_pressure_percentage: 0,
-          cac_increase_percentage: 0,
-          is_technology_failure: false,
-          interest_rate_shock: 0,
-          market_entry_underperformance_percentage: 0,
-          is_economic_recession: false
-        };
+      try {
+        if (stressTestingActive) {
+          const defaultPayload = {
+            start_year: null,
+            start_quarter: null,
+            customer_drop_percentage: 0,
+            pricing_pressure_percentage: 0,
+            cac_increase_percentage: 0,
+            is_technology_failure: false,
+            interest_rate_shock: 0,
+            market_entry_underperformance_percentage: 0,
+            is_economic_recession: false
+          };
 
-        const response = await fetch("http://localhost:8000/api/stress-test", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(defaultPayload),
-        });
+          const response = await fetch("http://localhost:8000/api/stress-test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(defaultPayload),
+          });
 
-        const data = await response.json();
-        if (data && data[sheetType]) {
-          setSheetData(data[sheetType]);
+          const data = await response.json();
+          if (data && data[sheetType]) setSheetData(data[sheetType]);
         } else {
-          console.error("No data found for sheet type:", sheetType);
+          const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+          const data = await response.json();
+          setSheetData(data);
         }
-      } else {
-        // Normal mode fetch
-        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const data = await response.json();
-        setSheetData(data);
+      } catch (error) {
+        console.error("Error fetching sheet data:", error);
       }
-    } catch (error) {
-      console.error("Error fetching sheet data:", error);
-    }
-  };
+    };
 
-  fetchData();
-}, [selectedYear, stressTestingActive]);
-
+    fetchData();
+  }, [selectedYear, stressTestingActive]);
 
   const updateCellAPI = async (fieldName: string, periodIdx: number, value: number) => {
-    if (stressTestingActive) return; // Prevent updates in stress mode
+    if (stressTestingActive || !isManager) return; // ✅ only managers can edit
 
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
@@ -304,10 +299,10 @@ useEffect(() => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              readOnly={stressTestingActive}
-                              style={stressTestingActive ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              readOnly={stressTestingActive || !isManager} // ✅ block if not manager
+                              style={stressTestingActive || !isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
                               onChange={(e) => {
-                                if (stressTestingActive) return;
+                                if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
                                 setSheetData(prev => ({
                                   ...prev,
@@ -322,12 +317,12 @@ useEffect(() => {
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (stressTestingActive) return;
+                                if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
                                 updateCellAPI(metric.name, pIdx, newValue);
                               }}
                               onKeyDown={(e) => {
-                                if (stressTestingActive) return;
+                                if (stressTestingActive || !isManager) return;
                                 if (e.key === "Enter") e.currentTarget.blur();
                               }}
                             />
