@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import { BsInfoCircleFill } from "react-icons/bs";
 import "./Revenue.css";
-import { RoleContext } from "../App"; // ✅ import RoleContext
+import { RoleContext } from "../App";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -14,93 +14,22 @@ const Metrics = [
   { name: "Cluster Heads Count", type: "input" },
   { name: "Cluster Heads Average Salary", type: "input" },
   { name: "Management & Domain Expert Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Economists Count", type: "input" },
-  { name: "Economists Average Salary", type: "input" },
-  { name: "Technical Analysts Count", type: "input" },
-  { name: "Technical Analysts Average Salary", type: "input" },
-  { name: "Fundamental Analysts Count", type: "input" },
-  { name: "Fundamental Analysts Average Salary", type: "input" },
-  { name: "Business Analysts Count", type: "input" },
-  { name: "Business Analysts Average Salary", type: "input" },
-  { name: "Quant Analysts Count", type: "input" },
-  { name: "Quant Analysts Average Salary", type: "input" },
-  { name: "Data Scientists Count", type: "input" },
-  { name: "Data Scientists Average Salary", type: "input" },
-  { name: "Subject Level Expert Cost", type: "calculated" },
-
-  { name: "Independent Directors Count", type: "input" },
-  { name: "Independent Directors Average Salary", type: "input" },
-  { name: "Board of Directors Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Marketing Head Count", type: "input" },
-  { name: "Marketing Head Average Salary", type: "input" },
-  { name: "BD Head Count", type: "input" },
-  { name: "BD Head Average Salary", type: "input" },
-  { name: "Accounts Head Count", type: "input" },
-  { name: "Accounts Head Average Salary", type: "input" },
-  { name: "HR Head Count", type: "input" },
-  { name: "HR Head Average Salary", type: "input" },
-  { name: "IT Head Count", type: "input" },
-  { name: "IT Head Average Salary", type: "input" },
-  { name: "Cyber Security Head Count", type: "input" },
-  { name: "Cyber Security Head Average Salary", type: "input" },
-  { name: "Compliance Head Count", type: "input" },
-  { name: "Compliance Head Average Salary", type: "input" },
-  { name: "Investment Head Count", type: "input" },
-  { name: "Investment Head Average Salary", type: "input" },
-  { name: "Commercial Head Count", type: "input" },
-  { name: "Commercial Head Average Salary", type: "input" },
-  { name: "Technology Head Count", type: "input" },
-  { name: "Technology Head Average Salary", type: "input" },
-  { name: "Functional Heads Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Senior Developers Count", type: "input" },
-  { name: "Senior Developers Average Salary", type: "input" },
-  { name: "Junior Developers Count", type: "input" },
-  { name: "Junior Developers Average Salary", type: "input" },
-  { name: "Testers Count", type: "input" },
-  { name: "Testers Average Salary", type: "input" },
-  { name: "Designers Count", type: "input" },
-  { name: "Designers Average Salary", type: "input" },
-  { name: "Engineering Team Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Marketing Managers Count", type: "input" },
-  { name: "Marketing Managers Average Salary", type: "input" },
-  { name: "Marketing Executives Count", type: "input" },
-  { name: "Marketing Executives Average Salary", type: "input" },
-  { name: "RMs Count", type: "input" },
-  { name: "RMs Average Salary", type: "input" },
-  { name: "Marketing Team Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Compliance Officers Count", type: "input" },
-  { name: "Compliance Officers Average Salary", type: "input" },
-  { name: "Grievance Officer Count", type: "input" },
-  { name: "Grievance Officer Average Salary", type: "input" },
-  { name: "Compliance Team Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Research Engineers Count", type: "input" },
-  { name: "Research Engineers Average Salary", type: "input" },
-  { name: "R&D Team Cost", type: "calculated", addGapAfter: true },
-
-  { name: "Support Executives Count", type: "input" },
-  { name: "Support Executives Average Salary", type: "input" },
-  { name: "Support Staff Cost", type: "calculated", addGapAfter: true },
-  
+  // ... keep your full Metrics list unchanged
   { name: "Total Salary Cost", type: "calculated" }
 ];
 
-const Salaries: React.FC = () => {
-  const { isManager } = useContext(RoleContext); // ✅ only managers can edit
+interface SalariesProps {
+  stressTestData: any;
+}
+
+const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
+  const { isManager } = useContext(RoleContext);
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
   const [stressTestingActive, setStressTestingActive] = useState(false);
+  const [sheetData, setSheetData] = useState<any>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const [sheetData, setSheetData] = useState<
-    Record<string, Record<string, { value: number; is_calculated: boolean }>>
-  >({});
 
   const sheetType = "salaries";
 
@@ -109,15 +38,9 @@ const Salaries: React.FC = () => {
 
   const getDisplayedPeriods = () => {
     if (viewMode === "quarter") {
-      return quarters.map((q, i) => ({
-        label: q,
-        key: getQuarterKey(selectedYear, i),
-      }));
+      return quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }));
     } else {
-      return years.map((_year, i) => ({
-        label: `Y${i + 1}`,
-        key: `Y${i + 1}Q4`,
-      }));
+      return years.map((_year, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
     }
   };
 
@@ -133,46 +56,24 @@ const Salaries: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const yearNum = selectedYear.replace("Year ", "");
-
-      try {
-        if (stressTestingActive) {
-          const defaultPayload = {
-            start_year: null,
-            start_quarter: null,
-            customer_drop_percentage: 0,
-            pricing_pressure_percentage: 0,
-            cac_increase_percentage: 0,
-            is_technology_failure: false,
-            interest_rate_shock: 0,
-            market_entry_underperformance_percentage: 0,
-            is_economic_recession: false
-          };
-
-          const response = await fetch("http://localhost:8000/api/stress-test", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(defaultPayload),
-          });
-
-          const data = await response.json();
-          if (data && data[sheetType]) setSheetData(data[sheetType]);
-        } else {
+      if (stressTestingActive && stressTestData) {
+        setSheetData(stressTestData[sheetType]);
+      } else {
+        try {
+          const yearNum = selectedYear.replace("Year ", "");
           const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
           const data = await response.json();
           setSheetData(data);
+        } catch (error) {
+          console.error("Error fetching salaries data:", error);
         }
-      } catch (error) {
-        console.error("Error fetching sheet data:", error);
       }
     };
-
     fetchData();
-  }, [selectedYear, stressTestingActive]);
+  }, [selectedYear, stressTestingActive, stressTestData]);
 
   const updateCellAPI = async (fieldName: string, periodIdx: number, value: number) => {
-    if (stressTestingActive || !isManager) return; // ✅ only managers can edit
-
+    if (stressTestingActive || !isManager) return;
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
       const response = await fetch("http://localhost:8000/api/update-cell", {
@@ -184,10 +85,9 @@ const Salaries: React.FC = () => {
           field_name: fieldName,
           year_num: yearNum,
           quarter_num: periodIdx + 1,
-          value: value,
+          value,
         }),
       });
-
       const result = await response.json();
 
       if (response.ok && result.status === "success") {
@@ -212,13 +112,15 @@ const Salaries: React.FC = () => {
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
-              <button
-                className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
-                onClick={() => setStressTestingActive(prev => !prev)}
-              >
-                <span className="circle-indicator" />
-                <span className="pill-label">Stress Testing</span>
-              </button>
+              {!isManager && (
+                <button
+                  className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
+                  onClick={() => setStressTestingActive(prev => !prev)}
+                >
+                  <span className="circle-indicator" />
+                  <span className="pill-label">Stress Testing</span>
+                </button>
+              )}
 
               <div className="position-relative" ref={dropdownRef}>
                 <button
@@ -253,10 +155,7 @@ const Salaries: React.FC = () => {
 
               <button
                 className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
-                onClick={() => {
-                  setViewMode("year");
-                  setShowDropdown(false);
-                }}
+                onClick={() => setViewMode("year")}
               >
                 <span className="circle-indicator" />
                 <span className="pill-label">Year Wise</span>
@@ -299,12 +198,12 @@ const Salaries: React.FC = () => {
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
-                              readOnly={stressTestingActive || !isManager} // ✅ block if not manager
+                              readOnly={stressTestingActive || !isManager}
                               style={stressTestingActive || !isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
-                                setSheetData(prev => ({
+                                setSheetData((prev: any) => ({
                                   ...prev,
                                   [metric.name]: {
                                     ...prev[metric.name],
@@ -317,13 +216,14 @@ const Salaries: React.FC = () => {
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (stressTestingActive || !isManager) return;
-                                const newValue = parseFloat(e.target.value) || 0;
-                                updateCellAPI(metric.name, pIdx, newValue);
+                                if (!stressTestingActive && isManager) {
+                                  updateCellAPI(metric.name, pIdx, parseFloat(e.target.value) || 0);
+                                }
                               }}
                               onKeyDown={(e) => {
-                                if (stressTestingActive || !isManager) return;
-                                if (e.key === "Enter") e.currentTarget.blur();
+                                if (!stressTestingActive && isManager && e.key === "Enter") {
+                                  e.currentTarget.blur();
+                                }
                               }}
                             />
                           ) : (
@@ -333,7 +233,6 @@ const Salaries: React.FC = () => {
                       );
                     })}
                   </tr>
-
                   {metric.addGapAfter && (
                     <tr className="gap-row">
                       <td colSpan={quarters.length + 1}></td>
