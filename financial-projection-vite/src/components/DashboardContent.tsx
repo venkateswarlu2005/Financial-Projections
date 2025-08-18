@@ -171,30 +171,38 @@ export default function Dashboard() {
   }, []);
 
   // --- Fetch Closed Round from M&A API ---
-  useEffect(() => {
-    const fetchClosedRoundData = async () => {
-      try {
-        const res = await fetch(`http://localhost:8000/api/gtm-data/1`);
-        const apiData: Record<string, Record<string, { value: number }>> = await res.json();
 
-        // Update these keys based on your actual API rows
-        const rows = ["Acquisition Type 1", "Acquisition Type 2", "Acquisition Type 3"];
-        
-        let sumQ1 = 0;
-        rows.forEach((row) => {
-          if (apiData[row]?.Q1) {
-            sumQ1 += apiData[row].Q1.value;
-          }
-        });
+useEffect(() => {
+  const fetchClosedRoundData = async () => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/gtm-data/1`);
+      const apiData: Record<string, Record<string, { count: number; amount_per_acquisition: number }>> =
+        await res.json();
 
-        setClosedRound(sumQ1);
-      } catch (err) {
-        console.error("Error fetching M&A data:", err);
-      }
-    };
+      // The acquisition types in your API
+      const rows = [
+        "Full Broking House",
+        "GOP Based Broker Deals (Permanent)",
+        "Secondary Market Deals"
+      ];
 
-    fetchClosedRoundData();
-  }, []);
+      let sumQ1 = 0;
+      rows.forEach((row) => {
+        const item = apiData[row]?.Y1Q1;
+        if (item) {
+          sumQ1 += item.count * item.amount_per_acquisition;
+        }
+      });
+
+      setClosedRound(sumQ1);
+    } catch (err) {
+      console.error("Error fetching M&A data:", err);
+    }
+  };
+
+  fetchClosedRoundData();
+}, []);
+
 
   // --- Chart Data ---
   const revenuePieChartData = {
