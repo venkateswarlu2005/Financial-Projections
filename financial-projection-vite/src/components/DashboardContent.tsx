@@ -57,7 +57,7 @@ export default function Dashboard() {
 
           const values = quarters.map((q) => totalNetUsersRow[q]?.value ?? 0);
           setGrowthData(values);
-          setTotalUsers(values[values.length - 1] || 0);
+          setTotalUsers(values[values.length - 4] || 0);
         }
       } catch (err) {
         console.error("Error fetching growth funnel data:", err);
