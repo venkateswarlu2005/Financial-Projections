@@ -281,31 +281,37 @@ export default function Dashboard() {
         />
         <Card key="card-3" title="Monthly churn Rate" value={`3,75,000`} />
         <Card
-          key="card-4"
-          title="Closed Round"
-          value={
-            isManager ? (
-              editingClosedRound ? (
-                <div className="closed-round-edit">
-                  <input
-                    type="number"
-                    value={closedRoundInput}
-                    onChange={(e) => setClosedRoundInput(Number(e.target.value))}
-                  />
-                  <button onClick={saveClosedRound}>Save</button>
-                  <button onClick={() => setEditingClosedRound(false)}>Cancel</button>
-                </div>
-              ) : (
-                <div className="closed-round-view">
-                  {formatNumber(closedRound)}
-                  <button onClick={() => setEditingClosedRound(true)}>Edit</button>
-                </div>
-              )
-            ) : (
-              formatNumber(closedRound)
-            )
-          }
+  key="card-4"
+  title="Closed Round"
+  value={
+    isManager ? (
+      editingClosedRound ? (
+        <input
+          type="number"
+          value={closedRoundInput}
+          autoFocus
+          onBlur={saveClosedRound} // save on losing focus
+          onKeyDown={(e) => {
+            if (e.key === "Enter") saveClosedRound();
+            if (e.key === "Escape") setEditingClosedRound(false);
+          }}
+          onChange={(e) => setClosedRoundInput(Number(e.target.value))}
+          style={{ width: "100px", textAlign: "center" }}
         />
+      ) : (
+        <span
+          onClick={() => setEditingClosedRound(true)}
+          style={{ cursor: "pointer" }}
+        >
+          {formatNumber(closedRound)}
+        </span>
+      )
+    ) : (
+      formatNumber(closedRound)
+    )
+  }
+/>
+
       </div>
 
       {/* Charts */}
