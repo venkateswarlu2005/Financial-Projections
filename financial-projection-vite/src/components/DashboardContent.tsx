@@ -37,6 +37,7 @@ export default function Dashboard() {
   const [dpData, setDpData] = useState<number[]>([]);
   const [revenueData, setRevenueData] = useState<number[]>([]);
   const [revenueLabels, setRevenueLabels] = useState<string[]>([]);
+  const [ltvCacRatio, setLtvCacRatio] = useState<number | null>(null); // 🆕
 
   // --- Fetch Growth Funnel ---
   useEffect(() => {
@@ -45,8 +46,6 @@ export default function Dashboard() {
         const res = await fetch(`http://localhost:8000/api/sheet-data/growth-funnel/1`);
         const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> =
           await res.json();
-
-        console.log("Growth API data:", apiData);
 
         const totalNetUsersRow = apiData["Total Net Users"];
         if (totalNetUsersRow) {
@@ -76,8 +75,6 @@ export default function Dashboard() {
         const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> =
           await res.json();
 
-        console.log("DP API data:", apiData);
-
         const dpValuationRow = apiData["DP Valuation"];
         if (dpValuationRow) {
           const quarters = Object.keys(dpValuationRow).sort((a, b) => {
@@ -96,91 +93,108 @@ export default function Dashboard() {
 
     fetchDPData();
   }, []);
+
+  // --- Fetch Revenue ---
   useEffect(() => {
-  const fetchRevenueData = async () => {
-    try {
-      const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/1`);
-      const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> =
-        await res.json();
+    const fetchRevenueData = async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/1`);
+        const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> =
+          await res.json();
 
-      // Assuming "Total Revenue" contains quarterly revenue
-      const totalRevenueRow = apiData["Total Revenue"];
-      if (!totalRevenueRow) return;
+        const totalRevenueRow = apiData["Total Revenue"];
+        if (!totalRevenueRow) return;
 
-      const quarters = Object.keys(totalRevenueRow).sort();
-      const values = quarters.map((q) => totalRevenueRow[q]?.value ?? 0);
+        const quarters = Object.keys(totalRevenueRow).sort();
+        const values = quarters.map((q) => totalRevenueRow[q]?.value ?? 0);
 
-      setRevenueLabels(quarters);
-      setRevenueData(values);
-    } catch (err) {
-      console.error("Error fetching total revenue data:", err);
-    }
+        setRevenueLabels(quarters);
+        setRevenueData(values);
+      } catch (err) {
+        console.error("Error fetching total revenue data:", err);
+      }
+    };
+
+    fetchRevenueData();
+  }, []);
+
+  // --- Fetch Revenue Breakdown ---
+  const [revenueBreakdownData, setRevenueBreakdownData] = useState<number[]>([]);
+  const [revenueBreakdownLabels, setRevenueBreakdownLabels] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchRevenueBreakdown = async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/1`);
+        const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> =
+          await res.json();
+
+        const revenueKeys = [
+          "Total Brokerage Revenue",
+          "Total PMS Revenue",
+          "Revenue from Subscriptions",
+          "Revenue from Broking Interest",
+          "Revenue from FPI",
+          "Revenue from AUMs",
+          "Net Insurance Income",
+        ];
+
+        const latestQuarter = Object.keys(apiData["Total Revenue"]).sort().pop();
+        if (!latestQuarter) return;
+
+        const values = revenueKeys.map((key) => apiData[key]?.[latestQuarter]?.value ?? 0);
+        setRevenueBreakdownData(values);
+        setRevenueBreakdownLabels(revenueKeys);
+      } catch (err) {
+        console.error("Error fetching revenue breakdown data:", err);
+      }
+    };
+
+    fetchRevenueBreakdown();
+  }, []);
+
+  // --- Fetch LTV / CAC Ratio ---
+  useEffect(() => {
+    const fetchLtvCac = async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/api/sheet-data/unit-economics/1`);
+        const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> =
+          await res.json();
+
+        const ltvRow = apiData["LTV/CAC Ratio"];
+        if (ltvRow?.Q1) {
+          setLtvCacRatio(ltvRow["Q1"].value);
+        }
+      } catch (err) {
+        console.error("Error fetching LTV/CAC ratio:", err);
+      }
+    };
+
+    fetchLtvCac();
+  }, []);
+
+  // --- Chart Data ---
+  const revenuePieChartData = {
+    labels: revenueBreakdownLabels,
+    datasets: [
+      {
+        data: revenueBreakdownData,
+        backgroundColor: [
+          "#f97316",
+          "#2563eb",
+          "#22c55e",
+          "#facc15",
+          "#8b5cf6",
+          "#ec4899",
+          "#14b8a6",
+        ],
+      },
+    ],
   };
-
-  fetchRevenueData();
-}, []);
-
-
-  // --- Fetch Total Revenue for chart ---
-  // --- Prepare Revenue Breakdown for Pie Chart ---
-const [revenueBreakdownData, setRevenueBreakdownData] = useState<number[]>([]);
-const [revenueBreakdownLabels, setRevenueBreakdownLabels] = useState<string[]>([]);
-
-useEffect(() => {
-  const fetchRevenueBreakdown = async () => {
-    try {
-      const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/1`);
-      const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> =
-        await res.json();
-
-      const revenueKeys = [
-        "Total Brokerage Revenue",
-        "Total PMS Revenue",
-        "Revenue from Subscriptions",
-        "Revenue from Broking Interest",
-        "Revenue from FPI",
-        "Revenue from AUMs",
-        "Net Insurance Income",
-      ];
-
-      const latestQuarter = Object.keys(apiData["Total Revenue"]).sort().pop(); // Get last quarter
-      if (!latestQuarter) return;
-
-      const values = revenueKeys.map((key) => apiData[key]?.[latestQuarter]?.value ?? 0);
-      setRevenueBreakdownData(values);
-      setRevenueBreakdownLabels(revenueKeys);
-    } catch (err) {
-      console.error("Error fetching revenue breakdown data:", err);
-    }
-  };
-
-  fetchRevenueBreakdown();
-}, []);
-
-// --- Doughnut Chart Data ---
-const revenuePieChartData = {
-  labels: revenueBreakdownLabels,
-  datasets: [
-    {
-      data: revenueBreakdownData,
-      backgroundColor: [
-        "#f97316", // orange
-        "#2563eb", // blue
-        "#22c55e", // green
-        "#facc15", // yellow
-        "#8b5cf6", // purple
-        "#ec4899", // pink
-        "#14b8a6", // teal
-      ],
-    },
-  ],
-};
-
 
   const formatNumber = (num: number) =>
     num?.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
-  // Chart Data
   const growthChartData = {
     labels: growthData.map((_, idx) => `Q${idx + 1}`),
     datasets: [
@@ -219,14 +233,17 @@ const revenuePieChartData = {
     ],
   };
 
-
   return (
     <div className="dashboard">
       {/* Summary Cards */}
       <div className="summary-cards">
         <Card key="card-0" title="Book Value per Share" value={`NAN`} />
         <Card key="card-1" title="Total Users" value={formatNumber(totalUsers)} />
-        <Card key="card-2" title="LTV / CAC Ratio" value={`NAN`} />
+        <Card
+          key="card-2"
+          title="LTV / CAC Ratio"
+          value={ltvCacRatio !== null ? ltvCacRatio.toFixed(2) : "N/A"}
+        />
         <Card key="card-3" title="Monthly churn Rate" value={`NAN`} />
         <Card key="card-4" title="Closed Round" value={`NAN`} />
       </div>
@@ -252,34 +269,39 @@ const revenuePieChartData = {
         </ChartCard>
 
         <ChartCard key="chart-4" title="Revenue Breakdown" value="" subText="">
-  <Doughnut
-    data={revenuePieChartData}
-    options={{
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "right" },
-        tooltip: {
-          callbacks: {
-            label: function (tooltipItem) {
-              const label = tooltipItem.label || "";
-              const value = revenueBreakdownData[tooltipItem.dataIndex] || 0;
-              return `${label}: ₹${value.toLocaleString("en-IN")}`;
-            },
-          },
-        },
-      },
-    }}
-  />
-</ChartCard>
-
+          <Doughnut
+            data={revenuePieChartData}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: "right" },
+                tooltip: {
+                  callbacks: {
+                    label: function (tooltipItem) {
+                      const label = tooltipItem.label || "";
+                      const value = revenueBreakdownData[tooltipItem.dataIndex] || 0;
+                      return `${label}: ₹${value.toLocaleString("en-IN")}`;
+                    },
+                  },
+                },
+              },
+            }}
+          />
+        </ChartCard>
 
         <ChartCard key="chart-2" title="Customer Growth" value="" subText="">
-          <Bar data={growthChartData} options={{ responsive: true, maintainAspectRatio: false }} />
+          <Bar
+            data={growthChartData}
+            options={{ responsive: true, maintainAspectRatio: false }}
+          />
         </ChartCard>
 
         <ChartCard key="chart-3" title="DP-Evaluation" value="" subText="">
-          <Line data={dpChartData} options={{ responsive: true, maintainAspectRatio: false }} />
+          <Line
+            data={dpChartData}
+            options={{ responsive: true, maintainAspectRatio: false }}
+          />
         </ChartCard>
       </div>
     </div>
