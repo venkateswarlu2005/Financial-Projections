@@ -34,6 +34,11 @@ export default function Dashboard() {
   const [revenueLabels, setRevenueLabels] = useState<string[]>([]);
   const [ltvCacRatio, setLtvCacRatio] = useState<number | null>(null);
 
+  const [revenueBreakdownData, setRevenueBreakdownData] = useState<number[]>([]);
+  const [revenueBreakdownLabels, setRevenueBreakdownLabels] = useState<string[]>([]);
+
+  const [closedRound, setClosedRound] = useState<number>(0);
+
   // --- Fetch Growth Funnel ---
   useEffect(() => {
     const fetchGrowthData = async () => {
@@ -114,9 +119,6 @@ export default function Dashboard() {
   }, []);
 
   // --- Fetch Revenue Breakdown ---
-  const [revenueBreakdownData, setRevenueBreakdownData] = useState<number[]>([]);
-  const [revenueBreakdownLabels, setRevenueBreakdownLabels] = useState<string[]>([]);
-
   useEffect(() => {
     const fetchRevenueBreakdown = async () => {
       try {
@@ -166,6 +168,32 @@ export default function Dashboard() {
     };
 
     fetchLtvCac();
+  }, []);
+
+  // --- Fetch Closed Round from M&A API ---
+  useEffect(() => {
+    const fetchClosedRoundData = async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/api/gtm-data/1`);
+        const apiData: Record<string, Record<string, { value: number }>> = await res.json();
+
+        // Update these keys based on your actual API rows
+        const rows = ["Acquisition Type 1", "Acquisition Type 2", "Acquisition Type 3"];
+        
+        let sumQ1 = 0;
+        rows.forEach((row) => {
+          if (apiData[row]?.Q1) {
+            sumQ1 += apiData[row].Q1.value;
+          }
+        });
+
+        setClosedRound(sumQ1);
+      } catch (err) {
+        console.error("Error fetching M&A data:", err);
+      }
+    };
+
+    fetchClosedRoundData();
   }, []);
 
   // --- Chart Data ---
@@ -239,8 +267,8 @@ export default function Dashboard() {
           title="LTV / CAC Ratio (Q1)"
           value={ltvCacRatio !== null ? ltvCacRatio.toFixed(2) : "N/A"}
         />
-        <Card key="card-3" title="Monthly churn Rate" value={`NAN`} />
-        <Card key="card-4" title="Closed Round" value={`NAN`} />
+        <Card key="card-3" title="Monthly churn Rate" value={`3,75,000`} />
+        <Card key="card-4" title="Closed Round" value={formatNumber(closedRound)} />
       </div>
 
       {/* Charts */}
