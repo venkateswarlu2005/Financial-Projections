@@ -26,18 +26,13 @@ ChartJS.register(
   Filler
 );
 
-interface DashboardProps {
-  selectedYear: string;
-  sheetType: string;
-}
-
 export default function Dashboard() {
   const [growthData, setGrowthData] = useState<number[]>([]);
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [dpData, setDpData] = useState<number[]>([]);
   const [revenueData, setRevenueData] = useState<number[]>([]);
   const [revenueLabels, setRevenueLabels] = useState<string[]>([]);
-  const [ltvCacRatio, setLtvCacRatio] = useState<number | null>(null); // 🆕
+  const [ltvCacRatio, setLtvCacRatio] = useState<number | null>(null);
 
   // --- Fetch Growth Funnel ---
   useEffect(() => {
@@ -162,8 +157,8 @@ export default function Dashboard() {
           await res.json();
 
         const ltvRow = apiData["LTV/CAC Ratio"];
-        if (ltvRow?.Q1) {
-          setLtvCacRatio(ltvRow["Q1"].value);
+        if (ltvRow?.Y1Q1) {
+          setLtvCacRatio(ltvRow["Y1Q1"].value);
         }
       } catch (err) {
         console.error("Error fetching LTV/CAC ratio:", err);
@@ -241,7 +236,7 @@ export default function Dashboard() {
         <Card key="card-1" title="Total Users" value={formatNumber(totalUsers)} />
         <Card
           key="card-2"
-          title="LTV / CAC Ratio"
+          title="LTV / CAC Ratio (Q1)"
           value={ltvCacRatio !== null ? ltvCacRatio.toFixed(2) : "N/A"}
         />
         <Card key="card-3" title="Monthly churn Rate" value={`NAN`} />
