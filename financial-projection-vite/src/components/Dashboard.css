@@ -145,6 +145,23 @@
 .closed-round-edit button:hover {
   background: #1e40af;
 }
+/* Input styling inside summary card */
+.summary-card input {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 1rem;
+  text-align: center;
+  color: #333;
+  width: 100px;
+  outline: none;
+}
+
+.summary-card input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
 
 
 /* Responsive: On mobile, stack in one column */

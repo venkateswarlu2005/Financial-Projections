@@ -19,6 +19,7 @@ import Valuation from "./components/Valuation";
 import ScenarioAnalysis from "./components/ScenarioAnalysis";
 import StressTesting from "./components/StressTesting";
 import Financial from "./components/Financial";
+import CashFlow from "./components/CashFlow";
 
 // ✅ Role context
 export const RoleContext = createContext<{ isManager: boolean }>({ isManager: false });
@@ -43,6 +44,7 @@ function App() {
               <div className="page-content">
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/cashflow" element={<CashFlow/>} />
                   <Route path="/revenue" element={<Revenue stressTestData={stressTestData} />} />
                   <Route path="/unit-economics" element={<UnitEconomics stressTestData={stressTestData} />} />
                   <Route path="/growth" element={<Growth stressTestData={stressTestData}/>} />

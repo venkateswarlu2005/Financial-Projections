@@ -192,21 +192,30 @@ export default function Dashboard() {
 
   // --- Save Closed Round ---
   const saveClosedRound = async () => {
-    try {
-      const res = await fetch(`http://localhost:8000/api/closed-round`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ value: closedRoundInput }),
-      });
-      const data = await res.json();
-      if (data.status === "success") {
-        setClosedRound(closedRoundInput);
-        setEditingClosedRound(false);
-      }
-    } catch (err) {
-      console.error("Error updating closed round:", err);
+  // Optimistically update UI first
+  setClosedRound(closedRoundInput);
+  setEditingClosedRound(false); // close input immediately
+
+  try {
+    const res = await fetch(`http://localhost:8000/api/closed-round`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value: closedRoundInput }),
+    });
+    const data = await res.json();
+
+    if (data.status !== "success") {
+      // Optionally revert UI if backend fails
+      console.error("Failed to update closed round on backend");
+      // setClosedRound(previousValue); // store previous value if needed
     }
-  };
+  } catch (err) {
+    console.error("Error updating closed round:", err);
+    // Optionally revert UI if backend fails
+    // setClosedRound(previousValue);
+  }
+};
+
 
   // --- Chart Data ---
   const revenuePieChartData = {
@@ -281,37 +290,35 @@ export default function Dashboard() {
         />
         <Card key="card-3" title="Monthly churn Rate" value={`3,75,000`} />
         <Card
-  key="card-4"
-  title="Closed Round"
-  value={
-    isManager ? (
-      editingClosedRound ? (
-        <input
-          type="number"
-          value={closedRoundInput}
-          autoFocus
-          onBlur={saveClosedRound} // save on losing focus
-          onKeyDown={(e) => {
-            if (e.key === "Enter") saveClosedRound();
-            if (e.key === "Escape") setEditingClosedRound(false);
-          }}
-          onChange={(e) => setClosedRoundInput(Number(e.target.value))}
-          style={{ width: "100px", textAlign: "center" }}
+          key="card-4"
+          title="Closed Round"
+          value={
+            isManager ? (
+              editingClosedRound ? (
+                <input
+                  type="number"
+                  value={closedRoundInput}
+                  autoFocus
+                  onBlur={saveClosedRound}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveClosedRound();
+                    if (e.key === "Escape") setEditingClosedRound(false);
+                  }}
+                  onChange={(e) => setClosedRoundInput(Number(e.target.value))}
+                />
+              ) : (
+                <span
+                  onClick={() => setEditingClosedRound(true)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {formatNumber(closedRound)}
+                </span>
+              )
+            ) : (
+              formatNumber(closedRound)
+            )
+          }
         />
-      ) : (
-        <span
-          onClick={() => setEditingClosedRound(true)}
-          style={{ cursor: "pointer" }}
-        >
-          {formatNumber(closedRound)}
-        </span>
-      )
-    ) : (
-      formatNumber(closedRound)
-    )
-  }
-/>
-
       </div>
 
       {/* Charts */}

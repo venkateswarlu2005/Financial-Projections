@@ -29,7 +29,7 @@ const menu = [
   {
     section: 'Financials',
     items: [
-      { label: 'Cashflow statement', path: '/growth', icon: <GrMoney /> },
+      { label: 'Cashflow statement', path: '/cashflow', icon: <GrMoney /> },
       { label: 'Profit and Loss statement', path: '/PnL-Statement', icon: <LuCircleDollarSign /> },
       { label: 'Valuation', path: '/valuation', icon: <LuWallet/> },
       { label: 'Unit Economics', path: '/unit-economics', icon: <LuCalculator /> },
