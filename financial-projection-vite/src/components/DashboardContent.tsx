@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,6 +13,7 @@ import {
 } from "chart.js";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import "./Dashboard.css";
+import { RoleContext } from "../App";
 
 ChartJS.register(
   CategoryScale,
@@ -27,6 +28,8 @@ ChartJS.register(
 );
 
 export default function Dashboard() {
+  const { isManager } = useContext(RoleContext);
+
   const [growthData, setGrowthData] = useState<number[]>([]);
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [dpData, setDpData] = useState<number[]>([]);
@@ -38,6 +41,8 @@ export default function Dashboard() {
   const [revenueBreakdownLabels, setRevenueBreakdownLabels] = useState<string[]>([]);
 
   const [closedRound, setClosedRound] = useState<number>(0);
+  const [editingClosedRound, setEditingClosedRound] = useState<boolean>(false);
+  const [closedRoundInput, setClosedRoundInput] = useState<number>(0);
 
   // --- Fetch Growth Funnel ---
   useEffect(() => {
@@ -170,39 +175,38 @@ export default function Dashboard() {
     fetchLtvCac();
   }, []);
 
-  // --- Fetch Closed Round from M&A API ---
+  // --- Fetch Closed Round ---
+  useEffect(() => {
+    const fetchClosedRound = async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/api/closed-round`);
+        const data = await res.json();
+        setClosedRound(data.value);
+        setClosedRoundInput(data.value);
+      } catch (err) {
+        console.error("Error fetching closed round:", err);
+      }
+    };
+    fetchClosedRound();
+  }, []);
 
-useEffect(() => {
-  const fetchClosedRoundData = async () => {
+  // --- Save Closed Round ---
+  const saveClosedRound = async () => {
     try {
-      const res = await fetch(`http://localhost:8000/api/gtm-data/1`);
-      const apiData: Record<string, Record<string, { count: number; amount_per_acquisition: number }>> =
-        await res.json();
-
-      // The acquisition types in your API
-      const rows = [
-        "Full Broking House",
-        "GOP Based Broker Deals (Permanent)",
-        "Secondary Market Deals"
-      ];
-
-      let sumQ1 = 0;
-      rows.forEach((row) => {
-        const item = apiData[row]?.Y1Q1;
-        if (item) {
-          sumQ1 += item.count * item.amount_per_acquisition;
-        }
+      const res = await fetch(`http://localhost:8000/api/closed-round`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: closedRoundInput }),
       });
-
-      setClosedRound(sumQ1);
+      const data = await res.json();
+      if (data.status === "success") {
+        setClosedRound(closedRoundInput);
+        setEditingClosedRound(false);
+      }
     } catch (err) {
-      console.error("Error fetching M&A data:", err);
+      console.error("Error updating closed round:", err);
     }
   };
-
-  fetchClosedRoundData();
-}, []);
-
 
   // --- Chart Data ---
   const revenuePieChartData = {
@@ -276,7 +280,32 @@ useEffect(() => {
           value={ltvCacRatio !== null ? ltvCacRatio.toFixed(2) : "N/A"}
         />
         <Card key="card-3" title="Monthly churn Rate" value={`3,75,000`} />
-        <Card key="card-4" title="Closed Round" value={formatNumber(closedRound)} />
+        <Card
+          key="card-4"
+          title="Closed Round"
+          value={
+            isManager ? (
+              editingClosedRound ? (
+                <div className="closed-round-edit">
+                  <input
+                    type="number"
+                    value={closedRoundInput}
+                    onChange={(e) => setClosedRoundInput(Number(e.target.value))}
+                  />
+                  <button onClick={saveClosedRound}>Save</button>
+                  <button onClick={() => setEditingClosedRound(false)}>Cancel</button>
+                </div>
+              ) : (
+                <div className="closed-round-view">
+                  {formatNumber(closedRound)}
+                  <button onClick={() => setEditingClosedRound(true)}>Edit</button>
+                </div>
+              )
+            ) : (
+              formatNumber(closedRound)
+            )
+          }
+        />
       </div>
 
       {/* Charts */}
@@ -329,10 +358,7 @@ useEffect(() => {
         </ChartCard>
 
         <ChartCard key="chart-3" title="DP-Evaluation" value="" subText="">
-          <Line
-            data={dpChartData}
-            options={{ responsive: true, maintainAspectRatio: false }}
-          />
+          <Line data={dpChartData} options={{ responsive: true, maintainAspectRatio: false }} />
         </ChartCard>
       </div>
     </div>
@@ -342,7 +368,7 @@ useEffect(() => {
 // ===== Reusable Components =====
 interface CardProps {
   title: string;
-  value: string | number;
+  value: string | number | React.ReactNode;
 }
 
 function Card({ title, value }: CardProps) {
