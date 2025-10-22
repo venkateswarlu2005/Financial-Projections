@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import { BsInfoCircleFill } from "react-icons/bs";
 import "./Revenue.css";
 import { RoleContext } from "../App";
+import { downloadCSV } from "../utils/downloadCSV";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -174,6 +175,19 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
       console.error("Update error:", error);
     }
   };
+// 🟢 Add this inside Salaries component (you already have it)
+const handleDownloadCSV = () => {
+  downloadCSV({
+    metrics: Metrics,
+    sheetData,
+    displayedQuarters: getDisplayedPeriods(), // ✅ fixed here
+    sheetType,
+    viewMode,
+    selectedYear,
+  });
+};
+
+
 
   return (
     <div className="revenue">
@@ -234,9 +248,10 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
                 <span className="pill-label">Year Wise</span>
               </button>
 
-              <button className="pill-toggle-btn no-dot">
+              <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV}>
                 <span className="pill-label">Download</span>
               </button>
+
             </div>
           </div>
 

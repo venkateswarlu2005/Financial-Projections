@@ -2,19 +2,21 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import "./Revenue.css"; 
 import { BsInfoCircleFill } from "react-icons/bs";
 import { RoleContext } from "../App";
+import { downloadCSV } from "../utils/downloadCSV";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
 const capexMetrics = [
-  { label: "Total Revenue", type: "auto" },
-  { label: "Total Salary Cost", type: "auto" },
-  { label: "Total Tech & OpEx", type: "auto"},
-  { label: "Total Customer Acquisition Spends", type: "auto" },
-  { label: "M&A Costs", type: "auto" },
-  { label: "Total Operating Costs", type: "auto" , addGapAfter: true },
-  { label: "EBITDA", type: "auto" },
-  { label: "EBITDA Margin (%)", type: "auto" }
+  { name: "Total Revenue", label: "Total Revenue", type: "auto" },
+  { name: "Total Salary Cost", label: "Total Salary Cost", type: "auto" },
+  { name: "Total Tech & OpEx", label: "Total Tech & OpEx", type: "auto" },
+  { name: "Total Customer Acquisition Spends", label: "Total Customer Acquisition Spends", type: "auto" },
+  { name: "M&A Costs", label: "M&A Costs", type: "auto" },
+  { name: "Total Operating Costs", label: "Total Operating Costs", type: "auto", addGapAfter: true },
+  { name: "EBITDA", label: "EBITDA", type: "auto" },
+  { name: "EBITDA Margin (%)", label: "EBITDA Margin (%)", type: "auto" }
 ];
+
 
 interface FinancialProps {
   stressTestData: any;
@@ -98,6 +100,16 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
       console.error("Update error:", error);
     }
   };
+    const handleDownloadCSV = () => {
+    downloadCSV({
+      metrics: capexMetrics,
+      sheetData,
+      displayedQuarters: getDisplayedQuarters(),
+      sheetType,
+      viewMode,
+      selectedYear,
+    });
+  };
 
   return (
     <div className="revenue">
@@ -158,7 +170,7 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
                 <span className="pill-label">Year Wise</span>
               </button>
 
-              <button className="pill-toggle-btn no-dot">
+              <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV}>
                 <span className="pill-label">Download</span>
               </button>
             </div>

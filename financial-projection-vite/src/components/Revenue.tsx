@@ -2,47 +2,49 @@ import React, { useState, useEffect, useRef, useContext } from "react";
 import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
 import { RoleContext } from "../App";
+import { downloadCSV } from "../utils/downloadCSV";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
 const metricItems = [
-  { label: "Average Brokerage Per User Per Trade", type: "input" },
-  { label: "Average No of Trades Per Day Per User", type: "input" },
-  { label: "Active Trading Users", type: "auto" },
-  { label: "Brokerage Revenue", type: "auto", addGapAfter: true },
-  { label: "Average AUM per Active User (₹)", type: "input" },
-  { label: "Average Active PMS Users", type: "auto" },
-  { label: "Management Fee from PMS", type: "input" },
-  { label: "PMS Revenue", type: "auto", addGapAfter: true },
-  { label: "AI Subscription Revenue Per User (₹)", type: "input" },
-  { label: "Average Active Subscription Users", type: "auto" },
-  { label: "Revenue from Subscriptions", type: "auto", addGapAfter: true },
-  { label: "Average Monthly AUM MF", type: "input" },
-  { label: "Average Monthly Revenue", type: "auto", addGapAfter: true },
-  { label: "Average Ideal Broking Funds", type: "input" },
-  { label: "Revenue from Broking Interest", type: "auto", addGapAfter: true },
-  { label: "Average Market Investment", type: "input" },
-  { label: "Average Revenue from Investments", type: "auto" },
-  { label: "Average no of user per month FPI", type: "input" },
-  { label: "Average Brokerage Per User", type: "input", addGapAfter: true },
-  { label: "Average Trade Per User", type: "input" },
-  { label: "Average AUM per User (₹)", type: "input" },
-  { label: "Revenue from FPI", type: "auto", addGapAfter: true },
-  { label: "Relationship Management Variable Pay Average", type: "input" },
-  { label: "Average AUM from RMs", type: "auto" },
-  { label: "Revenue from AUMs", type: "auto", addGapAfter: true },
-  { label: "Embedded Financial Service", type: "input" },
-  { label: "Digi Banking - CASA Interest", type: "auto" },
-  { label: "Digi Banking - Cards Income", type: "auto", addGapAfter: true },
-  { label: "Digi Insurance - Premium Average", type: "input" },
-  { label: "Insurance Premium Margin", type: "input" },
-  { label: "Net Insurance Income", type: "auto", addGapAfter: true },
-  { label: "Cross Border Payments and Investment Average Amount", type: "input" },
-  { label: "Average Payment Gateway Transactions", type: "input" },
-  { label: "Fee Per Transaction", type: "input", addGapAfter: true },
-  { label: "Total Revenue", type: "auto" },
-  { label: "Average Revenue Per User", type: "auto" },
+  { name: "Average Brokerage Per User Per Trade", label: "Average Brokerage Per User Per Trade", type: "input" },
+  { name: "Average No of Trades Per Day Per User", label: "Average No of Trades Per Day Per User", type: "input" },
+  { name: "Active Trading Users", label: "Active Trading Users", type: "auto" },
+  { name: "Brokerage Revenue", label: "Brokerage Revenue", type: "auto", addGapAfter: true },
+  { name: "Average AUM per Active User (₹)", label: "Average AUM per Active User (₹)", type: "input" },
+  { name: "Average Active PMS Users", label: "Average Active PMS Users", type: "auto" },
+  { name: "Management Fee from PMS", label: "Management Fee from PMS", type: "input" },
+  { name: "PMS Revenue", label: "PMS Revenue", type: "auto", addGapAfter: true },
+  { name: "AI Subscription Revenue Per User (₹)", label: "AI Subscription Revenue Per User (₹)", type: "input" },
+  { name: "Average Active Subscription Users", label: "Average Active Subscription Users", type: "auto" },
+  { name: "Revenue from Subscriptions", label: "Revenue from Subscriptions", type: "auto", addGapAfter: true },
+  { name: "Average Monthly AUM MF", label: "Average Monthly AUM MF", type: "input" },
+  { name: "Average Monthly Revenue", label: "Average Monthly Revenue", type: "auto", addGapAfter: true },
+  { name: "Average Ideal Broking Funds", label: "Average Ideal Broking Funds", type: "input" },
+  { name: "Revenue from Broking Interest", label: "Revenue from Broking Interest", type: "auto", addGapAfter: true },
+  { name: "Average Market Investment", label: "Average Market Investment", type: "input" },
+  { name: "Average Revenue from Investments", label: "Average Revenue from Investments", type: "auto" },
+  { name: "Average no of user per month FPI", label: "Average no of user per month FPI", type: "input" },
+  { name: "Average Brokerage Per User", label: "Average Brokerage Per User", type: "input", addGapAfter: true },
+  { name: "Average Trade Per User", label: "Average Trade Per User", type: "input" },
+  { name: "Average AUM per User (₹)", label: "Average AUM per User (₹)", type: "input" },
+  { name: "Revenue from FPI", label: "Revenue from FPI", type: "auto", addGapAfter: true },
+  { name: "Relationship Management Variable Pay Average", label: "Relationship Management Variable Pay Average", type: "input" },
+  { name: "Average AUM from RMs", label: "Average AUM from RMs", type: "auto" },
+  { name: "Revenue from AUMs", label: "Revenue from AUMs", type: "auto", addGapAfter: true },
+  { name: "Embedded Financial Service", label: "Embedded Financial Service", type: "input" },
+  { name: "Digi Banking - CASA Interest", label: "Digi Banking - CASA Interest", type: "auto" },
+  { name: "Digi Banking - Cards Income", label: "Digi Banking - Cards Income", type: "auto", addGapAfter: true },
+  { name: "Digi Insurance - Premium Average", label: "Digi Insurance - Premium Average", type: "input" },
+  { name: "Insurance Premium Margin", label: "Insurance Premium Margin", type: "input" },
+  { name: "Net Insurance Income", label: "Net Insurance Income", type: "auto", addGapAfter: true },
+  { name: "Cross Border Payments and Investment Average Amount", label: "Cross Border Payments and Investment Average Amount", type: "input" },
+  { name: "Average Payment Gateway Transactions", label: "Average Payment Gateway Transactions", type: "input" },
+  { name: "Fee Per Transaction", label: "Fee Per Transaction", type: "input", addGapAfter: true },
+  { name: "Total Revenue", label: "Total Revenue", type: "auto" },
+  { name: "Average Revenue Per User", label: "Average Revenue Per User", type: "auto" },
 ];
+
 
 interface RevenueProps {
   stressTestData: any;
@@ -112,6 +114,17 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
       } else console.error(result.message);
     } catch (err) { console.error(err); }
   };
+  const handleDownloadCSV = () => {
+  downloadCSV({
+    metrics: metricItems ,
+    sheetData,
+    displayedQuarters: getDisplayedQuarters(),
+    sheetType,
+    viewMode,
+    selectedYear,
+  });
+};
+
 
   return (
     <div className="revenue">
@@ -155,7 +168,7 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
                 <span className="circle-indicator" /><span className="pill-label">Year Wise</span>
               </button>
 
-              <button className="pill-toggle-btn no-dot">
+              <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV}>
                 <span className="pill-label">Download</span>
               </button>
             </div>

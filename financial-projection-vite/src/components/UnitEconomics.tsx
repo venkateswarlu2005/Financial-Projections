@@ -2,20 +2,22 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
 import { RoleContext } from "../App";
+import { downloadCSV } from "../utils/downloadCSV";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const yearsList = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 
 const metricItems = [
-  { label: "CAC (Customer Acquisition Cost)", type: "auto" },
-  { label: "ARPU (Average Revenue Per User)", type: "auto" },
-  { label: "Gross Margin (%)", type: "auto" },
-  { label: "Churn Rate (%)", type: "auto" },
-  { label: "Average Customer Lifetime (Months)", type: "auto", addGapAfter: true },
-  { label: "LTV (Lifetime Value)", type: "auto" },
-  { label: "LTV/CAC Ratio", type: "auto" },
-  { label: "Payback Period (Months)", type: "auto" }
+  { name: "CAC (Customer Acquisition Cost)", label: "CAC (Customer Acquisition Cost)", type: "auto" },
+  { name: "ARPU (Average Revenue Per User)", label: "ARPU (Average Revenue Per User)", type: "auto" },
+  { name: "Gross Margin (%)", label: "Gross Margin (%)", type: "auto" },
+  { name: "Churn Rate (%)", label: "Churn Rate (%)", type: "auto" },
+  { name: "Average Customer Lifetime (Months)", label: "Average Customer Lifetime (Months)", type: "auto", addGapAfter: true },
+  { name: "LTV (Lifetime Value)", label: "LTV (Lifetime Value)", type: "auto" },
+  { name: "LTV/CAC Ratio", label: "LTV/CAC Ratio", type: "auto" },
+  { name: "Payback Period (Months)", label: "Payback Period (Months)", type: "auto" }
 ];
+
 
 interface UnitEconomicsProps {
   stressTestData: any;
@@ -97,6 +99,16 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
       console.error("Update error:", err);
     }
   };
+    const handleDownloadCSV = () => {
+    downloadCSV({
+      metrics: metricItems,
+      sheetData,
+      displayedQuarters: getDisplayedQuarters(),
+      sheetType,
+      viewMode,
+      selectedYear,
+    });
+  };
 
   return (
     <div className="revenue">
@@ -157,7 +169,7 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
                 <span className="pill-label">Year Wise</span>
               </button>
 
-              <button className="pill-toggle-btn no-dot">
+              <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV}>
                 <span className="pill-label">Download</span>
               </button>
             </div>

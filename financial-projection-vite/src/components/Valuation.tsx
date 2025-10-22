@@ -2,18 +2,20 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
 import { RoleContext } from "../App";
+import { downloadCSV } from "../utils/downloadCSV";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const yearsList = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 
 const valuationMetrics = [
-  { label: "Revenue Multiple", type: "input" },
-  { label: "EBITDA Multiple", type: "input" },
-  { label: "Customer Multiple (₹)", type: "input", addGapAfter: true },
-  { label: "Revenue-based Valuation", type: "auto" },
-  { label: "EBITDA-based Valuation", type: "auto" },
-  { label: "Customer-based Valuation", type: "auto" }
+  { name: "Revenue Multiple", label: "Revenue Multiple", type: "input" },
+  { name: "EBITDA Multiple", label: "EBITDA Multiple", type: "input" },
+  { name: "Customer Multiple (₹)", label: "Customer Multiple (₹)", type: "input", addGapAfter: true },
+  { name: "Revenue-based Valuation", label: "Revenue-based Valuation", type: "auto" },
+  { name: "EBITDA-based Valuation", label: "EBITDA-based Valuation", type: "auto" },
+  { name: "Customer-based Valuation", label: "Customer-based Valuation", type: "auto" }
 ];
+
 
 interface ValuationProps {
   stressTestData: any;
@@ -95,6 +97,16 @@ const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
       console.error("Update error:", err);
     }
   };
+    const handleDownloadCSV = () => {
+    downloadCSV({
+      metrics: valuationMetrics,
+      sheetData,
+      displayedQuarters: getDisplayedPeriods(),
+      sheetType,
+      viewMode,
+      selectedYear,
+    });
+  };
 
   return (
     <div className="revenue">
@@ -155,7 +167,7 @@ const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
                 <span className="pill-label">Year Wise</span>
               </button>
 
-              <button className="pill-toggle-btn no-dot">
+              <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV} >
                 <span className="pill-label">Download</span>
               </button>
             </div>

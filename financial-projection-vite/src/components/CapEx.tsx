@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
-import "./Revenue.css"; 
+import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
 import { RoleContext } from "../App";
+import { downloadCSV } from "../utils/downloadCSV";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
@@ -11,7 +12,7 @@ const growthMetrics = [
   { name: "Equipments", type: "cumulative" },
   { name: "Vehicles", type: "cumulative" },
   { name: "NSE Data Processing Units", type: "cumulative", addGapAfter: true },
-  { name: "Total Assets Value", type: "calculated" }
+  { name: "Total Assets Value", type: "calculated" },
 ];
 
 interface CapExProps {
@@ -34,9 +35,25 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
   const getDisplayedQuarters = () => {
     return viewMode === "quarter"
       ? quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }))
-      : ["Year 1","Year 2","Year 3","Year 4","Year 5"].map((_y,i)=>({ label:`Y${i+1}`, key:`Y${i+1}Q4` }));
+      : ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((_y, i) => ({
+          label: `Y${i + 1}`,
+          key: `Y${i + 1}Q4`,
+        }));
   };
 
+const handleDownloadCSV = () => {
+  downloadCSV({
+    metrics: growthMetrics,
+    sheetData,
+    displayedQuarters: getDisplayedQuarters(),
+    sheetType,
+    viewMode,
+    selectedYear,
+  });
+};
+
+
+  // Close dropdown if clicked outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -47,6 +64,7 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       if (stressTestingActive && stressTestData) {
@@ -54,7 +72,9 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
       } else {
         try {
           const yearNum = selectedYear.replace("Year ", "");
-          const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+          const response = await fetch(
+            `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`
+          );
           const data = await response.json();
           setSheetData(data);
         } catch (error) {
@@ -83,7 +103,9 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
       });
       const result = await response.json();
       if (response.ok && result.status === "success") {
-        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const updated = await fetch(
+          `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`
+        );
         const updatedData = await updated.json();
         setSheetData(updatedData);
       } else {
@@ -107,7 +129,7 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
               {!isManager && (
                 <button
                   className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
-                  onClick={() => setStressTestingActive(prev => !prev)}
+                  onClick={() => setStressTestingActive((prev) => !prev)}
                 >
                   <span className="circle-indicator" />
                   <span className="pill-label">Stress Testing</span>
@@ -119,7 +141,7 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
                   onClick={() => {
                     setViewMode("quarter");
-                    setShowDropdown(prev => !prev);
+                    setShowDropdown((prev) => !prev);
                   }}
                 >
                   <span className="circle-indicator" />
@@ -128,7 +150,7 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
 
                 {showDropdown && (
                   <div className="custom-dropdown">
-                    {["Year 1","Year 2","Year 3","Year 4","Year 5"].map((year, idx) => (
+                    {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
                       <div
                         key={idx}
                         className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
@@ -153,7 +175,8 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
                 <span className="pill-label">Year Wise</span>
               </button>
 
-              <button className="pill-toggle-btn no-dot">
+              {/* 🟢 Download Button */}
+              <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV}>
                 <span className="pill-label">Download</span>
               </button>
             </div>
@@ -164,7 +187,9 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
               <tr>
                 <th className="metrics-header">Metrics</th>
                 {getDisplayedQuarters().map((q, i) => (
-                  <th key={i} className="quarter-header">{q.label}</th>
+                  <th key={i} className="quarter-header">
+                    {q.label}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -184,13 +209,19 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
                       const isCalculated = metricData?.is_calculated ?? false;
                       return (
                         <td key={qIdx}>
-                          {metric.type === "cumulative" && !isCalculated && viewMode === "quarter" ? (
+                          {metric.type === "cumulative" &&
+                          !isCalculated &&
+                          viewMode === "quarter" ? (
                             <input
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
                               readOnly={stressTestingActive || !isManager}
-                              style={stressTestingActive || !isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              style={
+                                stressTestingActive || !isManager
+                                  ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+                                  : {}
+                              }
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
@@ -207,10 +238,12 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (!stressTestingActive && isManager) updateCellAPI(metric.name, qIdx, parseFloat(e.target.value) || 0);
+                                if (!stressTestingActive && isManager)
+                                  updateCellAPI(metric.name, qIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
-                                if (!stressTestingActive && isManager && e.key === "Enter") e.currentTarget.blur();
+                                if (!stressTestingActive && isManager && e.key === "Enter")
+                                  e.currentTarget.blur();
                               }}
                             />
                           ) : (
@@ -220,7 +253,11 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
                       );
                     })}
                   </tr>
-                  {metric.addGapAfter && <tr className="gap-row"><td colSpan={quarters.length + 1}></td></tr>}
+                  {metric.addGapAfter && (
+                    <tr className="gap-row">
+                      <td colSpan={quarters.length + 1}></td>
+                    </tr>
+                  )}
                 </React.Fragment>
               ))}
             </tbody>

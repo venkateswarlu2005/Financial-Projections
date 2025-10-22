@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
 import { RoleContext } from "../App";
+import { downloadCSV } from "../utils/downloadCSV";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -131,6 +132,17 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
       console.error("Update error:", error);
     }
   };
+  const handleDownloadCSV = () => {
+  downloadCSV({
+    metrics: techOpex,
+    sheetData,
+    displayedQuarters: getDisplayedPeriods(),
+    sheetType,
+    viewMode,
+    selectedYear,
+  });
+};
+
 
   return (
     <div className="revenue">
@@ -194,9 +206,10 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
                 <span className="pill-label">Year Wise</span>
               </button>
 
-              <button className="pill-toggle-btn no-dot">
+              <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV}>
                 <span className="pill-label">Download</span>
               </button>
+
             </div>
           </div>
 

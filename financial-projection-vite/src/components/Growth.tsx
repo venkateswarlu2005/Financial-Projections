@@ -2,37 +2,39 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import "./Revenue.css"; // Reuse Revenue styles
 import { BsInfoCircleFill } from "react-icons/bs";
 import { RoleContext } from "../App";
+import { downloadCSV } from "../utils/downloadCSV";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
 const growthMetrics = [
-  { label: "Search Engine & GPT Marketing Spends", type: "input" },
-  { label: "Average Reach from Search", type: "input", addGapAfter: true },
+  { name: "Search Engine & GPT Marketing Spends", label: "Search Engine & GPT Marketing Spends", type: "input" },
+  { name: "Average Reach from Search", label: "Average Reach from Search", type: "input", addGapAfter: true },
 
-  { label: "Social Media Marketing Spends (Ads)", type: "input" },
-  { label: "Average Reach from Social Ads", type: "input", addGapAfter: true },
+  { name: "Social Media Marketing Spends (Ads)", label: "Social Media Marketing Spends (Ads)", type: "input" },
+  { name: "Average Reach from Social Ads", label: "Average Reach from Social Ads", type: "input", addGapAfter: true },
 
-  { label: "Social Media Campaigns (Strategy & Design Spends)", type: "input" },
-  { label: "Average Reach from Social Campaigns", type: "input", addGapAfter: true },
-  { label: "ATL Campaigns Spends", type: "input" },
-  { label: "Average Reach from ATL", type: "input", addGapAfter: true },
+  { name: "Social Media Campaigns (Strategy & Design Spends)", label: "Social Media Campaigns (Strategy & Design Spends)", type: "input" },
+  { name: "Average Reach from Social Campaigns", label: "Average Reach from Social Campaigns", type: "input", addGapAfter: true },
+  { name: "ATL Campaigns Spends", label: "ATL Campaigns Spends", type: "input" },
+  { name: "Average Reach from ATL", label: "Average Reach from ATL", type: "input", addGapAfter: true },
 
-  { label: "Total Spends on Customer Acquisition", type: "auto", addGapAfter: true },
+  { name: "Total Spends on Customer Acquisition", label: "Total Spends on Customer Acquisition", type: "auto", addGapAfter: true },
 
-  { label: "Website Visitors", type: "auto" },
-  { label: "Sign-Ups / Leads", type: "auto" },
-  { label: "KYC Verified", type: "auto" },
-  { label: "Activated Accounts", type: "auto" },
-  { label: "Active Traders", type: "auto" },
-  { label: "Paying Subscribers", type: "auto" },
-  { label: "AUM Contributors", type: "input" },
+  { name: "Website Visitors", label: "Website Visitors", type: "auto" },
+  { name: "Sign-Ups / Leads", label: "Sign-Ups / Leads", type: "auto" },
+  { name: "KYC Verified", label: "KYC Verified", type: "auto" },
+  { name: "Activated Accounts", label: "Activated Accounts", type: "auto" },
+  { name: "Active Traders", label: "Active Traders", type: "auto" },
+  { name: "Paying Subscribers", label: "Paying Subscribers", type: "auto" },
+  { name: "AUM Contributors", label: "AUM Contributors", type: "input" },
 
-  { label: "Churn Rate", type: "input" },
-  { label: "Users Lost", type: "auto", addGapAfter: true },
+  { name: "Churn Rate", label: "Churn Rate", type: "input" },
+  { name: "Users Lost", label: "Users Lost", type: "auto", addGapAfter: true },
 
-  { label: "Total Net Users", type: "auto" },
-  { label: "Cost of Customer Acquisition", type: "auto" }
+  { name: "Total Net Users", label: "Total Net Users", type: "auto" },
+  { name: "Cost of Customer Acquisition", label: "Cost of Customer Acquisition", type: "auto" }
 ];
+
 
 interface GrowthProps {
   stressTestData: any;
@@ -150,6 +152,17 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
       setLoadingAI(false);
     }
   };
+  const handleDownloadCSV = () => {
+    downloadCSV({
+      metrics: growthMetrics,
+      sheetData,
+      displayedQuarters: getDisplayedQuarters(),
+      sheetType,
+      viewMode,
+      selectedYear,
+    });
+  };
+
 
   return (
     <div className="revenue">
@@ -214,9 +227,10 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
                 </span>
               </button>
 
-              <button className="pill-toggle-btn no-dot">
-                <span className="pill-label">Download</span>
+              <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV}>
+               <span className="pill-label">Download</span>
               </button>
+
             </div>
           </div>
 
