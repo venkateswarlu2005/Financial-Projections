@@ -15,9 +15,8 @@ const metricItems = [
   { name: "Average Customer Lifetime (Months)", label: "Average Customer Lifetime (Months)", type: "auto", addGapAfter: true },
   { name: "LTV (Lifetime Value)", label: "LTV (Lifetime Value)", type: "auto" },
   { name: "LTV/CAC Ratio", label: "LTV/CAC Ratio", type: "auto" },
-  { name: "Payback Period (Months)", label: "Payback Period (Months)", type: "auto" }
+  { name: "Payback Period (Months)", label: "Payback Period (Months)", type: "auto" },
 ];
-
 
 interface UnitEconomicsProps {
   stressTestData: any;
@@ -52,24 +51,38 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ✅ Updated fetch logic (Option 1)
   useEffect(() => {
-    if (stressTestingActive && stressTestData) {
-      setSheetData(stressTestData[sheetType]);
-    } else {
-      // fetch sheet data normally
-      const fetchData = async () => {
-        try {
+    const fetchData = async () => {
+      try {
+        if (stressTestingActive && stressTestData) {
+          setSheetData(stressTestData[sheetType]);
+          return;
+        }
+
+        if (viewMode === "year") {
+          // Fetch all years at once
+          const allData: any = {};
+          for (let year = 1; year <= 5; year++) {
+            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+            const data = await res.json();
+            allData[`Year ${year}`] = data;
+          }
+          setSheetData(allData);
+        } else {
+          // Fetch only selected year for quarter view
           const yearNum = selectedYear.replace("Year ", "");
           const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
           const data = await res.json();
           setSheetData(data);
-        } catch (err) {
-          console.error("Error fetching unit economics data:", err);
         }
-      };
-      fetchData();
-    }
-  }, [selectedYear, stressTestingActive, stressTestData]);
+      } catch (err) {
+        console.error("Error fetching unit economics data:", err);
+      }
+    };
+
+    fetchData();
+  }, [viewMode, selectedYear, stressTestingActive, stressTestData]);
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
@@ -99,7 +112,8 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
       console.error("Update error:", err);
     }
   };
-    const handleDownloadCSV = () => {
+
+  const handleDownloadCSV = () => {
     downloadCSV({
       metrics: metricItems,
       sheetData,
@@ -197,7 +211,11 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
                     </td>
 
                     {getDisplayedQuarters().map((q, qIdx) => {
-                      const metricData = sheetData?.[metric.label]?.[q.key];
+                      const yearKey = viewMode === "year" ? `Year ${q.label.replace("Y", "")}` : selectedYear;
+                      const metricData =
+                        viewMode === "year"
+                          ? sheetData?.[yearKey]?.[metric.label]?.[q.key]
+                          : sheetData?.[metric.label]?.[q.key];
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
 
@@ -213,7 +231,7 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
-                                setSheetData((prev: { [x: string]: { [x: string]: any; }; }) => ({
+                                setSheetData((prev: any) => ({
                                   ...prev,
                                   [metric.label]: {
                                     ...prev[metric.label],
@@ -226,10 +244,12 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (!stressTestingActive && isManager) updateCellAPI(metric.label, qIdx, parseFloat(e.target.value) || 0);
+                                if (!stressTestingActive && isManager)
+                                  updateCellAPI(metric.label, qIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
-                                if (!stressTestingActive && isManager && e.key === "Enter") e.currentTarget.blur();
+                                if (!stressTestingActive && isManager && e.key === "Enter")
+                                  e.currentTarget.blur();
                               }}
                             />
                           ) : (
