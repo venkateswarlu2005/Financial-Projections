@@ -1,85 +1,105 @@
-import React, { useState, useRef, useEffect, useContext } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import { BsInfoCircleFill } from "react-icons/bs";
 import "./Revenue.css";
 import { RoleContext } from "../App";
 import { downloadCSV } from "../utils/downloadCSV";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
-const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
+const yearsList = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 
-const Metrics = [
-  { name: "Core Management Count", type: "input" },
-  { name: "Core Management Average Salary", type: "input" },
-  { name: "Domain Specific Head Count", type: "input" },
-  { name: "Domain Specific Head Average Salary", type: "input" },
-  { name: "Cluster Heads Count", type: "input" },
-  { name: "Cluster Heads Average Salary", type: "input" },
-  { name: "Management & Domain Expert Cost", type: "calculated", addGapAfter: true },
-  { name: "Economists Count", type: "input" },
-  { name: "Economists Average Salary", type: "input" },
-  { name: "Technical Analysts Count", type: "input" },
-  { name: "Technical Analysts Average Salary", type: "input" },
-  { name: "Fundamental Analysts Count", type: "input" },
-  { name: "Fundamental Analysts Average Salary", type: "input" },
-  { name: "Business Analysts Count", type: "input" },
-  { name: "Business Analysts Average Salary", type: "input" },
-  { name: "Quant Analysts Count", type: "input" },
-  { name: "Quant Analysts Average Salary", type: "input" },
-  { name: "Data Scientists Count", type: "input" },
-  { name: "Data Scientists Average Salary", type: "input" },
-  { name: "Subject Level Expert Cost", type: "calculated" },
-  { name: "Independent Directors Count", type: "input" },
-  { name: "Independent Directors Average Salary", type: "input" },
-  { name: "Board of Directors Cost", type: "calculated", addGapAfter: true },
-  { name: "Marketing Head Count", type: "input" },
-  { name: "Marketing Head Average Salary", type: "input" },
-  { name: "BD Head Count", type: "input" },
-  { name: "BD Head Average Salary", type: "input" },
-  { name: "Accounts Head Count", type: "input" },
-  { name: "Accounts Head Average Salary", type: "input" },
-  { name: "HR Head Count", type: "input" },
-  { name: "HR Head Average Salary", type: "input" },
-  { name: "IT Head Count", type: "input" },
-  { name: "IT Head Average Salary", type: "input" },
-  { name: "Cyber Security Head Count", type: "input" },
-  { name: "Cyber Security Head Average Salary", type: "input" },
-  { name: "Compliance Head Count", type: "input" },
-  { name: "Compliance Head Average Salary", type: "input" },
-  { name: "Investment Head Count", type: "input" },
-  { name: "Investment Head Average Salary", type: "input" },
-  { name: "Commercial Head Count", type: "input" },
-  { name: "Commercial Head Average Salary", type: "input" },
-  { name: "Technology Head Count", type: "input" },
-  { name: "Technology Head Average Salary", type: "input" },
-  { name: "Functional Heads Cost", type: "calculated", addGapAfter: true },
-  { name: "Senior Developers Count", type: "input" },
-  { name: "Senior Developers Average Salary", type: "input" },
-  { name: "Junior Developers Count", type: "input" },
-  { name: "Junior Developers Average Salary", type: "input" },
-  { name: "Testers Count", type: "input" },
-  { name: "Testers Average Salary", type: "input" },
-  { name: "Designers Count", type: "input" },
-  { name: "Designers Average Salary", type: "input" },
-  { name: "Engineering Team Cost", type: "calculated", addGapAfter: true },
-  { name: "Marketing Managers Count", type: "input" },
-  { name: "Marketing Managers Average Salary", type: "input" },
-  { name: "Marketing Executives Count", type: "input" },
-  { name: "Marketing Executives Average Salary", type: "input" },
-  { name: "RMs Count", type: "input" },
-  { name: "RMs Average Salary", type: "input" },
-  { name: "Marketing Team Cost", type: "calculated", addGapAfter: true },
-  { name: "Compliance Officers Count", type: "input" },
-  { name: "Compliance Officers Average Salary", type: "input" },
-  { name: "Grievance Officer Count", type: "input" },
-  { name: "Grievance Officer Average Salary", type: "input" },
-  { name: "Compliance Team Cost", type: "calculated", addGapAfter: true },
-  { name: "Research Engineers Count", type: "input" },
-  { name: "Research Engineers Average Salary", type: "input" },
-  { name: "R&D Team Cost", type: "calculated", addGapAfter: true },
-  { name: "Support Executives Count", type: "input" },
-  { name: "Support Executives Average Salary", type: "input" },
-  { name: "Support Staff Cost", type: "calculated", addGapAfter: true },
-  { name: "Total Salary Cost", type: "calculated" }
+// Define all salary metrics with yearlySum flag
+const metricItems = [
+  { name: "Core Management Count", type: "input", yearlySum: false },
+  { name: "Core Management Average Salary", type: "input", yearlySum: false },
+  { name: "Domain Specific Head Count", type: "input", yearlySum: false },
+  { name: "Domain Specific Head Average Salary", type: "input", yearlySum: false },
+  { name: "Cluster Heads Count", type: "input", yearlySum: false },
+  { name: "Cluster Heads Average Salary", type: "input", yearlySum: false },
+
+  // Calculated Costs → sum of quarters
+  { name: "Management & Domain Expert Cost", type: "calculated", yearlySum: true, addGapAfter: true },
+
+  { name: "Economists Count", type: "input", yearlySum: false },
+  { name: "Economists Average Salary", type: "input", yearlySum: false },
+  { name: "Technical Analysts Count", type: "input", yearlySum: false },
+  { name: "Technical Analysts Average Salary", type: "input", yearlySum: false },
+  { name: "Fundamental Analysts Count", type: "input", yearlySum: false },
+  { name: "Fundamental Analysts Average Salary", type: "input", yearlySum: false },
+  { name: "Business Analysts Count", type: "input", yearlySum: false },
+  { name: "Business Analysts Average Salary", type: "input", yearlySum: false },
+  { name: "Quant Analysts Count", type: "input", yearlySum: false },
+  { name: "Quant Analysts Average Salary", type: "input", yearlySum: false },
+  { name: "Data Scientists Count", type: "input", yearlySum: false },
+  { name: "Data Scientists Average Salary", type: "input", yearlySum: false },
+
+  { name: "Subject Level Expert Cost", type: "calculated", yearlySum: true },
+
+  { name: "Independent Directors Count", type: "input", yearlySum: false },
+  { name: "Independent Directors Average Salary", type: "input", yearlySum: false },
+
+  { name: "Board of Directors Cost", type: "calculated", yearlySum: true, addGapAfter: true },
+
+  { name: "Marketing Head Count", type: "input", yearlySum: false },
+  { name: "Marketing Head Average Salary", type: "input", yearlySum: false },
+  { name: "BD Head Count", type: "input", yearlySum: false },
+  { name: "BD Head Average Salary", type: "input", yearlySum: false },
+  { name: "Accounts Head Count", type: "input", yearlySum: false },
+  { name: "Accounts Head Average Salary", type: "input", yearlySum: false },
+  { name: "HR Head Count", type: "input", yearlySum: false },
+  { name: "HR Head Average Salary", type: "input", yearlySum: false },
+  { name: "IT Head Count", type: "input", yearlySum: false },
+  { name: "IT Head Average Salary", type: "input", yearlySum: false },
+  { name: "Cyber Security Head Count", type: "input", yearlySum: false },
+  { name: "Cyber Security Head Average Salary", type: "input", yearlySum: false },
+  { name: "Compliance Head Count", type: "input", yearlySum: false },
+  { name: "Compliance Head Average Salary", type: "input", yearlySum: false },
+  { name: "Investment Head Count", type: "input", yearlySum: false },
+  { name: "Investment Head Average Salary", type: "input", yearlySum: false },
+  { name: "Commercial Head Count", type: "input", yearlySum: false },
+  { name: "Commercial Head Average Salary", type: "input", yearlySum: false },
+  { name: "Technology Head Count", type: "input", yearlySum: false },
+  { name: "Technology Head Average Salary", type: "input", yearlySum: false },
+
+  { name: "Functional Heads Cost", type: "calculated", yearlySum: true, addGapAfter: true },
+
+  { name: "Senior Developers Count", type: "input", yearlySum: false },
+  { name: "Senior Developers Average Salary", type: "input", yearlySum: false },
+  { name: "Junior Developers Count", type: "input", yearlySum: false },
+  { name: "Junior Developers Average Salary", type: "input", yearlySum: false },
+  { name: "Testers Count", type: "input", yearlySum: false },
+  { name: "Testers Average Salary", type: "input", yearlySum: false },
+  { name: "Designers Count", type: "input", yearlySum: false },
+  { name: "Designers Average Salary", type: "input", yearlySum: false },
+
+  { name: "Engineering Team Cost", type: "calculated", yearlySum: true, addGapAfter: true },
+
+  { name: "Marketing Managers Count", type: "input", yearlySum: false },
+  { name: "Marketing Managers Average Salary", type: "input", yearlySum: false },
+  { name: "Marketing Executives Count", type: "input", yearlySum: false },
+  { name: "Marketing Executives Average Salary", type: "input", yearlySum: false },
+  { name: "RMs Count", type: "input", yearlySum: false },
+  { name: "RMs Average Salary", type: "input", yearlySum: false },
+
+  { name: "Marketing Team Cost", type: "calculated", yearlySum: true, addGapAfter: true },
+
+  { name: "Compliance Officers Count", type: "input", yearlySum: false },
+  { name: "Compliance Officers Average Salary", type: "input", yearlySum: false },
+  { name: "Grievance Officer Count", type: "input", yearlySum: false },
+  { name: "Grievance Officer Average Salary", type: "input", yearlySum: false },
+
+  { name: "Compliance Team Cost", type: "calculated", yearlySum: true, addGapAfter: true },
+
+  { name: "Research Engineers Count", type: "input", yearlySum: false },
+  { name: "Research Engineers Average Salary", type: "input", yearlySum: false },
+
+  { name: "R&D Team Cost", type: "calculated", yearlySum: true, addGapAfter: true },
+
+  { name: "Support Executives Count", type: "input", yearlySum: false },
+  { name: "Support Executives Average Salary", type: "input", yearlySum: false },
+
+  { name: "Support Staff Cost", type: "calculated", yearlySum: true, addGapAfter: true },
+
+  { name: "Total Salary Cost", type: "calculated", yearlySum: true }
 ];
 
 interface SalariesProps {
@@ -94,29 +114,27 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
   const [stressTestingActive, setStressTestingActive] = useState(false);
   const [sheetData, setSheetData] = useState<any>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
-
   const sheetType = "salaries";
 
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
 
-  const getDisplayedPeriods = () =>
+  const getDisplayedQuarters = () =>
     viewMode === "quarter"
       ? quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }))
-      : years.map((_y, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
+      : yearsList.map((_y, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}` }));
 
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node))
         setShowDropdown(false);
-      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch logic updated for year-wise view
+  // Fetch sheet data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -124,9 +142,7 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
           setSheetData(stressTestData[sheetType]);
           return;
         }
-
         if (viewMode === "year") {
-          // fetch all years
           const allData: any = {};
           for (let year = 1; year <= 5; year++) {
             const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
@@ -147,7 +163,7 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
     fetchData();
   }, [viewMode, selectedYear, stressTestingActive, stressTestData]);
 
-  const updateCellAPI = async (fieldName: string, periodIdx: number, value: number) => {
+  const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
@@ -159,9 +175,9 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
           sheet_type: sheetType,
           field_name: fieldName,
           year_num: yearNum,
-          quarter_num: periodIdx + 1,
-          value
-        })
+          quarter_num: quarterIdx + 1,
+          value,
+        }),
       });
       const result = await res.json();
       if (res.ok && result.status === "success") {
@@ -169,18 +185,18 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
         const updatedData = await updatedRes.json();
         setSheetData(updatedData);
       } else {
-        console.error("Error updating cell:", result.message);
+        console.error(result.message);
       }
     } catch (err) {
-      console.error("Update error:", err);
+      console.error("Error updating cell:", err);
     }
   };
 
   const handleDownloadCSV = () => {
     downloadCSV({
-      metrics: Metrics,
+      metrics: metricItems,
       sheetData,
-      displayedQuarters: getDisplayedPeriods(),
+      displayedQuarters: getDisplayedQuarters(),
       sheetType,
       viewMode,
       selectedYear,
@@ -210,7 +226,10 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
               <div className="position-relative" ref={dropdownRef}>
                 <button
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
-                  onClick={() => { setViewMode("quarter"); setShowDropdown(prev => !prev); }}
+                  onClick={() => {
+                    setViewMode("quarter");
+                    setShowDropdown(prev => !prev);
+                  }}
                 >
                   <span className="circle-indicator" />
                   <span className="pill-label">Quarter Wise</span>
@@ -218,11 +237,14 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
 
                 {showDropdown && (
                   <div className="custom-dropdown">
-                    {years.map(year => (
+                    {yearsList.map((year) => (
                       <div
                         key={year}
                         className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
-                        onClick={() => { setSelectedYear(year); setShowDropdown(false); }}
+                        onClick={() => {
+                          setSelectedYear(year);
+                          setShowDropdown(false);
+                        }}
                       >
                         <span className={`radio-circle ${selectedYear === year ? "filled" : ""}`} />
                         {year}
@@ -250,13 +272,13 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
             <thead>
               <tr>
                 <th className="metrics-header">Metrics</th>
-                {getDisplayedPeriods().map((p, i) => (
-                  <th key={i} className="quarter-header">{p.label}</th>
+                {getDisplayedQuarters().map((q, i) => (
+                  <th key={i} className="quarter-header">{q.label}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {Metrics.map((metric, idx) => (
+              {metricItems.map((metric, idx) => (
                 <React.Fragment key={idx}>
                   <tr className="align-middle">
                     <td>
@@ -265,43 +287,59 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
                         {metric.type === "input" ? "Input" : "Auto"}
                       </div>
                     </td>
+                    {getDisplayedQuarters().map((q, qIdx) => {
+                      let value = 0;
+                      const yearKey = viewMode === "year" ? `Year ${q.label.replace("Y", "")}` : selectedYear;
 
-                    {getDisplayedPeriods().map((p, pIdx) => {
-                      const yearKey = viewMode === "year" ? `Year ${p.label.replace("Y", "")}` : selectedYear;
-                      const metricData =
-                        viewMode === "year"
-                          ? sheetData?.[yearKey]?.[metric.name]?.[p.key]
-                          : sheetData?.[metric.name]?.[p.key];
-                      const value = metricData?.value ?? 0;
-                      const isCalculated = metricData?.is_calculated ?? false;
+                      if (viewMode === "year") {
+                        const yearData = sheetData?.[yearKey]?.[metric.name] || {};
+                        if (metric.yearlySum) {
+                          // Sum all quarters for calculated metrics
+                          value = Object.values(yearData).reduce(
+                            (acc: number, cur: any) => acc + (cur.value ?? 0),
+                            0
+                          );
+                        } else {
+                          // Q4 snapshot for counts/averages
+                          value = yearData?.[`Y${q.label.replace("Y", "")}Q4`]?.value ?? 0;
+                        }
+                      } else {
+                        value = sheetData?.[metric.name]?.[q.key]?.value ?? 0;
+                      }
+
+                      const isCalculated = sheetData?.[metric.name]?.[q.key]?.is_calculated ?? false;
 
                       return (
-                        <td key={pIdx}>
+                        <td key={qIdx}>
                           {metric.type === "input" && !isCalculated && viewMode === "quarter" ? (
                             <input
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
                               readOnly={stressTestingActive || !isManager}
-                              style={stressTestingActive || !isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              style={
+                                stressTestingActive || !isManager
+                                  ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+                                  : {}
+                              }
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
-                                const newValue = parseFloat(e.target.value) || 0;
+                                const newVal = parseFloat(e.target.value) || 0;
                                 setSheetData((prev: any) => ({
                                   ...prev,
                                   [metric.name]: {
                                     ...prev[metric.name],
-                                    [p.key]: {
-                                      ...prev[metric.name]?.[p.key],
-                                      value: newValue,
+                                    [q.key]: {
+                                      ...prev[metric.name]?.[q.key],
+                                      value: newVal,
                                       is_calculated: false,
-                                    }
-                                  }
+                                    },
+                                  },
                                 }));
                               }}
                               onBlur={(e) => {
                                 if (!stressTestingActive && isManager)
-                                  updateCellAPI(metric.name, pIdx, parseFloat(e.target.value) || 0);
+                                  updateCellAPI(metric.name, qIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
                                 if (!stressTestingActive && isManager && e.key === "Enter")
@@ -315,7 +353,6 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
                       );
                     })}
                   </tr>
-
                   {metric.addGapAfter && (
                     <tr className="gap-row">
                       <td colSpan={quarters.length + 1}></td>
