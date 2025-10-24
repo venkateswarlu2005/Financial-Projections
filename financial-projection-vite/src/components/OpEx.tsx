@@ -8,33 +8,34 @@ const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 
 const techOpex = [
-  { name: "Cyber Security", type: "input" },
-  { name: "Servers", type: "input" },
-  { name: "Data Processing Equipment - NSE", type: "input" },
-  { name: "GPUs", type: "input" },
-  { name: "Lease Line", type: "input" },
-  { name: "Third Party APIs", type: "input" },
-  { name: "Third Party SAAS", type: "input" },
-  { name: "Google Workspace", type: "input", afterGap: true },
+  // yearlySum: true → sum of Q1-Q4, false → Q4 snapshot
+  { name: "Cyber Security", type: "input", yearlySum: true },
+  { name: "Servers", type: "input", yearlySum: true },
+  { name: "Data Processing Equipment - NSE", type: "input", yearlySum: true },
+  { name: "GPUs", type: "input", yearlySum: true },
+  { name: "Lease Line", type: "input", yearlySum: true },
+  { name: "Third Party APIs", type: "input", yearlySum: true },
+  { name: "Third Party SAAS", type: "input", yearlySum: true },
+  { name: "Google Workspace", type: "input", yearlySum: true, afterGap: true },
 
-  { name: "AMCs", type: "input" },
-  { name: "SEBI Compliance", type: "input" },
-  { name: "NSE", type: "input" },
-  { name: "BSE", type: "input" },
-  { name: "DP", type: "input" },
-  { name: "AMFI", type: "input" },
-  { name: "RBI", type: "input" },
-  { name: "ROC", type: "input" },
-  { name: "IT", type: "input", afterGap: true },
+  { name: "AMCs", type: "input", yearlySum: true },
+  { name: "SEBI Compliance", type: "input", yearlySum: true },
+  { name: "NSE", type: "input", yearlySum: true },
+  { name: "BSE", type: "input", yearlySum: true },
+  { name: "DP", type: "input", yearlySum: true },
+  { name: "AMFI", type: "input", yearlySum: true },
+  { name: "RBI", type: "input", yearlySum: true },
+  { name: "ROC", type: "input", yearlySum: true },
+  { name: "IT", type: "input", yearlySum: true, afterGap: true },
 
-  { name: "Office Rent", type: "input" },
-  { name: "Utilities & Internet", type: "input" },
-  { name: "Office Supplies", type: "input" },
-  { name: "Travel", type: "input", afterGap: true },
+  { name: "Office Rent", type: "input", yearlySum: true },
+  { name: "Utilities & Internet", type: "input", yearlySum: true },
+  { name: "Office Supplies", type: "input", yearlySum: true },
+  { name: "Travel", type: "input", yearlySum: true, afterGap: true },
 
-  { name: "Inflation Adjustment (%)", type: "auto" },
-  { name: "Surprise Costs", type: "auto" },
-  { name: "Total", type: "auto" }
+  { name: "Inflation Adjustment (%)", type: "auto", yearlySum: false },
+  { name: "Surprise Costs", type: "auto", yearlySum: true },
+  { name: "Total", type: "auto", yearlySum: true }
 ];
 
 interface OpExProps {
@@ -47,10 +48,10 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
   const [stressTestingActive, setStressTestingActive] = useState(false);
+  const [sheetData, setSheetData] = useState<any>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const sheetType = "tech-opex";
-  const [sheetData, setSheetData] = useState<any>({});
 
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
@@ -60,7 +61,6 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
       ? quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }))
       : years.map((_y, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
 
-  // Handle outside click for dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -71,7 +71,6 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch data for quarter or year view
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -230,12 +229,23 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
 
                     {getDisplayedPeriods().map((p, pIdx) => {
                       const yearKey = viewMode === "year" ? `Year ${p.label.replace("Y", "")}` : selectedYear;
-                      const metricData =
-                        viewMode === "year"
-                          ? sheetData?.[yearKey]?.[metric.name]?.[p.key]
-                          : sheetData?.[metric.name]?.[p.key];
-                      const value = metricData?.value ?? 0;
-                      const isCalculated = metricData?.is_calculated ?? false;
+                      let value = 0;
+
+                      if (viewMode === "year") {
+                        const yearData = sheetData?.[yearKey]?.[metric.name] || {};
+                        if (metric.yearlySum) {
+                          value = Object.values(yearData).reduce(
+                            (acc: number, cur: any) => acc + (cur?.value ?? 0),
+                            0
+                          );
+                        } else {
+                          value = yearData?.[`Y${p.label.replace("Y", "")}Q4`]?.value ?? 0;
+                        }
+                      } else {
+                        value = sheetData?.[metric.name]?.[p.key]?.value ?? 0;
+                      }
+
+                      const isCalculated = sheetData?.[metric.name]?.[p.key]?.is_calculated ?? false;
 
                       return (
                         <td key={pIdx}>
