@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600&display=swap');
+
 .dashboard {
   padding: 1rem;
   background: #fef6f3;
@@ -34,8 +35,8 @@
 
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr); /* 2 columns */
-  grid-template-rows: repeat(2, 1fr);    /* 2 rows */
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
   gap: 1.5rem;
 }
 
@@ -72,79 +73,6 @@
   flex: 1;
 }
 
-.year-selector {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.year-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid #ddd;
-  background: #fff;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s ease-in-out;
-}
-
-.year-btn:hover {
-  background: #f5f5f5;
-}
-
-.year-btn.active {
-  background: #ff5e62;
-  color: white;
-  border-color: #ff5e62;
-}
-.closed-round-view {
-  display: flex;
-  align-items: center;
-  gap: 8px; /* spacing between number and button */
-}
-
-.closed-round-view button {
-  background: #f97316; /* orange or any theme color */
-  border: none;
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 0.85rem;
-  color: white;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.closed-round-view button:hover {
-  background: #ea580c; /* darker orange on hover */
-}
-
-.closed-round-edit {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.closed-round-edit input {
-  padding: 4px 8px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  width: 100px;
-}
-
-.closed-round-edit button {
-  background: #2563eb; /* blue for Save/Cancel */
-  border: none;
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 0.85rem;
-  color: white;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.closed-round-edit button:hover {
-  background: #1e40af;
-}
 /* Input styling inside summary card */
 .summary-card input {
   background: #fff;
@@ -163,8 +91,7 @@
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
-
-/* Responsive: On mobile, stack in one column */
+/* Responsive */
 @media (max-width: 768px) {
   .charts-grid {
     grid-template-columns: 1fr;

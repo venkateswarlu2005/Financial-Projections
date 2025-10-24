@@ -62,13 +62,12 @@ export default function Dashboard() {
 
           const values = quarters.map((q) => totalNetUsersRow[q]?.value ?? 0);
           setGrowthData(values);
-          setTotalUsers(values[values.length - 4] || 0);
+          setTotalUsers(values[values.length - 1] || 0);
         }
       } catch (err) {
         console.error("Error fetching growth funnel data:", err);
       }
     };
-
     fetchGrowthData();
   }, []);
 
@@ -95,7 +94,6 @@ export default function Dashboard() {
         console.error("Error fetching dp-evaluation data:", err);
       }
     };
-
     fetchDPData();
   }, []);
 
@@ -119,7 +117,6 @@ export default function Dashboard() {
         console.error("Error fetching total revenue data:", err);
       }
     };
-
     fetchRevenueData();
   }, []);
 
@@ -151,7 +148,6 @@ export default function Dashboard() {
         console.error("Error fetching revenue breakdown data:", err);
       }
     };
-
     fetchRevenueBreakdown();
   }, []);
 
@@ -164,14 +160,11 @@ export default function Dashboard() {
           await res.json();
 
         const ltvRow = apiData["LTV/CAC Ratio"];
-        if (ltvRow?.Y1Q1) {
-          setLtvCacRatio(ltvRow["Y1Q1"].value);
-        }
+        if (ltvRow?.Y1Q1) setLtvCacRatio(ltvRow["Y1Q1"].value);
       } catch (err) {
         console.error("Error fetching LTV/CAC ratio:", err);
       }
     };
-
     fetchLtvCac();
   }, []);
 
@@ -192,30 +185,20 @@ export default function Dashboard() {
 
   // --- Save Closed Round ---
   const saveClosedRound = async () => {
-  // Optimistically update UI first
-  setClosedRound(closedRoundInput);
-  setEditingClosedRound(false); // close input immediately
-
-  try {
-    const res = await fetch(`http://localhost:8000/api/closed-round`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ value: closedRoundInput }),
-    });
-    const data = await res.json();
-
-    if (data.status !== "success") {
-      // Optionally revert UI if backend fails
-      console.error("Failed to update closed round on backend");
-      // setClosedRound(previousValue); // store previous value if needed
+    setClosedRound(closedRoundInput);
+    setEditingClosedRound(false);
+    try {
+      const res = await fetch(`http://localhost:8000/api/closed-round`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: closedRoundInput }),
+      });
+      const data = await res.json();
+      if (data.status !== "success") console.error("Failed to update closed round on backend");
+    } catch (err) {
+      console.error("Error updating closed round:", err);
     }
-  } catch (err) {
-    console.error("Error updating closed round:", err);
-    // Optionally revert UI if backend fails
-    // setClosedRound(previousValue);
-  }
-};
-
+  };
 
   // --- Chart Data ---
   const revenuePieChartData = {
@@ -288,7 +271,7 @@ export default function Dashboard() {
           title="LTV / CAC Ratio (Q1)"
           value={ltvCacRatio !== null ? ltvCacRatio.toFixed(2) : "N/A"}
         />
-        <Card key="card-3" title="Monthly churn Rate" value={`3,75,000`} />
+        <Card key="card-3" title="Monthly Churn Rate" value={`3,75,000`} />
         <Card
           key="card-4"
           title="Closed Round"
