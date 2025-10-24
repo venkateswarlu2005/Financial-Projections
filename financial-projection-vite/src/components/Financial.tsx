@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
-import "./Revenue.css"; 
+import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
 import { RoleContext } from "../App";
 import { downloadCSV } from "../utils/downloadCSV";
@@ -16,7 +16,6 @@ const capexMetrics = [
   { name: "EBITDA", label: "EBITDA", type: "auto" },
   { name: "EBITDA Margin (%)", label: "EBITDA Margin (%)", type: "auto" }
 ];
-
 
 interface FinancialProps {
   stressTestData: any;
@@ -44,6 +43,7 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
           key: `Y${i + 1}Q4`
         }));
 
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -54,23 +54,38 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch sheet data
   useEffect(() => {
-    if (stressTestingActive && stressTestData) {
-      setSheetData(stressTestData[sheetType]);
-    } else {
-      const fetchData = async () => {
-        try {
+    const fetchData = async () => {
+      try {
+        if (stressTestingActive && stressTestData) {
+          setSheetData(stressTestData[sheetType]);
+          return;
+        }
+
+        if (viewMode === "year") {
+          // Fetch all 5 years when Year Wise view is active
+          const allData: any = {};
+          for (let year = 1; year <= 5; year++) {
+            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+            const data = await res.json();
+            allData[`Year ${year}`] = data;
+          }
+          setSheetData(allData);
+        } else {
+          // Fetch only selected year for Quarter Wise view
           const yearNum = selectedYear.replace("Year ", "");
           const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
           const data = await res.json();
           setSheetData(data);
-        } catch (error) {
-          console.error("Error fetching sheet data:", error);
         }
-      };
-      fetchData();
-    }
-  }, [selectedYear, stressTestingActive, stressTestData]);
+      } catch (error) {
+        console.error("Error fetching sheet data:", error);
+      }
+    };
+
+    fetchData();
+  }, [selectedYear, stressTestingActive, stressTestData, viewMode]);
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
@@ -100,7 +115,8 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
       console.error("Update error:", error);
     }
   };
-    const handleDownloadCSV = () => {
+
+  const handleDownloadCSV = () => {
     downloadCSV({
       metrics: capexMetrics,
       sheetData,
@@ -198,7 +214,15 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
                     </td>
 
                     {getDisplayedQuarters().map((q, qIdx) => {
-                      const metricData = sheetData?.[metric.label]?.[q.key];
+                      // Dynamic access logic depending on viewMode
+                      let metricData;
+                      if (viewMode === "year") {
+                        const yearKey = `Year ${q.label.replace("Y", "")}`;
+                        metricData = sheetData?.[yearKey]?.[metric.label]?.[q.key];
+                      } else {
+                        metricData = sheetData?.[metric.label]?.[q.key];
+                      }
+
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
 
@@ -214,7 +238,7 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
-                                setSheetData((prev: { [x: string]: { [x: string]: any; }; }) => ({
+                                setSheetData((prev: { [x: string]: { [x: string]: any } }) => ({
                                   ...prev,
                                   [metric.label]: {
                                     ...prev[metric.label],
@@ -227,7 +251,8 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (!stressTestingActive && isManager) updateCellAPI(metric.label, qIdx, parseFloat(e.target.value) || 0);
+                                if (!stressTestingActive && isManager)
+                                  updateCellAPI(metric.label, qIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
                                 if (!stressTestingActive && isManager && e.key === "Enter") e.currentTarget.blur();
