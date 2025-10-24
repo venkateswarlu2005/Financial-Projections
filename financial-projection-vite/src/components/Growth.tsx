@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
-import "./Revenue.css"; // Reuse Revenue styles
+import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
 import { RoleContext } from "../App";
 import { downloadCSV } from "../utils/downloadCSV";
@@ -10,18 +10,13 @@ const yearsList = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 const growthMetrics = [
   { name: "Search Engine & GPT Marketing Spends", label: "Search Engine & GPT Marketing Spends", type: "input" },
   { name: "Average Reach from Search", label: "Average Reach from Search", type: "input", addGapAfter: true },
-
   { name: "Social Media Marketing Spends (Ads)", label: "Social Media Marketing Spends (Ads)", type: "input" },
   { name: "Average Reach from Social Ads", label: "Average Reach from Social Ads", type: "input", addGapAfter: true },
-
   { name: "Social Media Campaigns (Strategy & Design Spends)", label: "Social Media Campaigns (Strategy & Design Spends)", type: "input" },
   { name: "Average Reach from Social Campaigns", label: "Average Reach from Social Campaigns", type: "input", addGapAfter: true },
-
   { name: "ATL Campaigns Spends", label: "ATL Campaigns Spends", type: "input" },
   { name: "Average Reach from ATL", label: "Average Reach from ATL", type: "input", addGapAfter: true },
-
   { name: "Total Spends on Customer Acquisition", label: "Total Spends on Customer Acquisition", type: "auto", addGapAfter: true },
-
   { name: "Website Visitors", label: "Website Visitors", type: "auto" },
   { name: "Sign-Ups / Leads", label: "Sign-Ups / Leads", type: "auto" },
   { name: "KYC Verified", label: "KYC Verified", type: "auto" },
@@ -29,14 +24,11 @@ const growthMetrics = [
   { name: "Active Traders", label: "Active Traders", type: "auto" },
   { name: "Paying Subscribers", label: "Paying Subscribers", type: "auto" },
   { name: "AUM Contributors", label: "AUM Contributors", type: "input" },
-
   { name: "Churn Rate", label: "Churn Rate", type: "input" },
   { name: "Users Lost", label: "Users Lost", type: "auto", addGapAfter: true },
-
   { name: "Total Net Users", label: "Total Net Users", type: "auto" },
   { name: "Cost of Customer Acquisition", label: "Cost of Customer Acquisition", type: "auto" }
 ];
-
 
 interface GrowthProps {
   stressTestData: any;
@@ -52,6 +44,7 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
 
   const sheetType = "growth-funnel";
   const [sheetData, setSheetData] = useState<any>({});
+  const [loadingAI, setLoadingAI] = useState(false);
 
   const getQuarterKey = (year: string, quarterIdx: number) => `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
 
@@ -70,7 +63,6 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ✅ Fetch all years at once for Year view
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -97,7 +89,6 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
         console.error("Error fetching growth data:", err);
       }
     };
-
     fetchData();
   }, [viewMode, selectedYear, stressTestingActive, stressTestData]);
 
@@ -118,10 +109,35 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
         }),
       });
       const result = await res.json();
-      if (res.ok && result.status === "success") await fetchData();
-      else console.error("Update failed:", result.message);
+      if (res.ok && result.status === "success") {
+        const updatedRes = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const updatedData = await updatedRes.json();
+        setSheetData(updatedData);
+      } else {
+        console.error("Error updating cell:", result.message);
+      }
     } catch (err) {
       console.error("Update error:", err);
+    }
+  };
+
+  const getAIReachSuggestions = async () => {
+    if (!stressTestingActive) {
+      setLoadingAI(true);
+      try {
+        const yearNum = selectedYear.replace("Year ", "");
+        const response = await fetch("http://localhost:8000/api/auto-populate-reach", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ company_id: 1, year: yearNum }),
+        });
+        const data = await response.json();
+        if (response.ok && data.status === "success") await fetchData();
+      } catch (err) {
+        console.error("AI suggestion failed:", err);
+      } finally {
+        setLoadingAI(false);
+      }
     }
   };
 
@@ -193,6 +209,16 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
               >
                 <span className="circle-indicator" />
                 <span className="pill-label">Year Wise</span>
+              </button>
+
+              <button
+                className="pill-toggle-btn no-dot"
+                onClick={getAIReachSuggestions}
+                disabled={loadingAI}
+              >
+                <span className="pill-label">
+                  {loadingAI ? "Applying AI..." : "AI Suggestions"}
+                </span>
               </button>
 
               <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV}>
