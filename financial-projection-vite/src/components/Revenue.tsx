@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useContext } from "react";
 import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
 import { RoleContext } from "../App";
-import { downloadCSV } from "../utils/downloadCSV"; // ✅ Central reusable utility
+import { downloadCSV } from "../utils/downloadCSV";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const yearsList = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -77,23 +77,35 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ✅ Updated fetch logic for both modes
   useEffect(() => {
     const fetchData = async () => {
-      if (stressTestingActive && stressTestData) {
-        setSheetData(stressTestData[sheetType]);
-      } else {
-        try {
-          const yearNum = selectedYear.replace("Year ", "");
-          const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-          const data = await response.json();
-          setSheetData(data);
-        } catch (err) {
-          console.error("Error fetching revenue data:", err);
+      try {
+        if (stressTestingActive && stressTestData) {
+          setSheetData(stressTestData[sheetType]);
+          return;
         }
+
+        if (viewMode === "year") {
+          const allData: any = {};
+          for (let year = 1; year <= 5; year++) {
+            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+            const data = await res.json();
+            allData[`Year ${year}`] = data;
+          }
+          setSheetData(allData);
+        } else {
+          const yearNum = selectedYear.replace("Year ", "");
+          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+          const data = await res.json();
+          setSheetData(data);
+        }
+      } catch (err) {
+        console.error("Error fetching revenue data:", err);
       }
     };
     fetchData();
-  }, [selectedYear, stressTestingActive, stressTestData]);
+  }, [viewMode, selectedYear, stressTestingActive, stressTestData]);
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
@@ -113,14 +125,14 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
       });
       const result = await res.json();
       if (res.ok && result.status === "success") {
-        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const updatedData = await updated.json();
+        const updatedRes = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const updatedData = await updatedRes.json();
         setSheetData(updatedData);
       } else {
-        console.error("Error updating cell:", result.message);
+        console.error(result.message);
       }
     } catch (err) {
-      console.error("Update error:", err);
+      console.error("Error updating cell:", err);
     }
   };
 
@@ -141,17 +153,14 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
         <div className="container mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
-              Revenue Streams & Income{" "}
-              <span className="info-icon">
-                <BsInfoCircleFill />
-              </span>
+              Revenue Streams & Income <span className="info-icon"><BsInfoCircleFill /></span>
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
               {!isManager && (
                 <button
                   className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
-                  onClick={() => setStressTestingActive((prev) => !prev)}
+                  onClick={() => setStressTestingActive(prev => !prev)}
                 >
                   <span className="circle-indicator" />
                   <span className="pill-label">Stress Testing</span>
@@ -163,7 +172,7 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
                   onClick={() => {
                     setViewMode("quarter");
-                    setShowDropdown((prev) => !prev);
+                    setShowDropdown(prev => !prev);
                   }}
                 >
                   <span className="circle-indicator" />
@@ -208,13 +217,10 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
               <tr>
                 <th className="metrics-header">Metrics</th>
                 {getDisplayedQuarters().map((q, i) => (
-                  <th key={i} className="quarter-header">
-                    {q.label}
-                  </th>
+                  <th key={i} className="quarter-header">{q.label}</th>
                 ))}
               </tr>
             </thead>
-
             <tbody>
               {metricItems.map((metric, idx) => (
                 <React.Fragment key={idx}>
@@ -225,9 +231,13 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
                         {metric.type === "input" ? "Input" : "Auto"}
                       </div>
                     </td>
-
                     {getDisplayedQuarters().map((q, qIdx) => {
-                      const metricData = sheetData?.[metric.label]?.[q.key];
+                      const yearKey =
+                        viewMode === "year" ? `Year ${q.label.replace("Y", "")}` : selectedYear;
+                      const metricData =
+                        viewMode === "year"
+                          ? sheetData?.[yearKey]?.[metric.label]?.[q.key]
+                          : sheetData?.[metric.label]?.[q.key];
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
 
@@ -275,7 +285,6 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
                       );
                     })}
                   </tr>
-
                   {metric.addGapAfter && (
                     <tr className="gap-row">
                       <td colSpan={quarters.length + 1}></td>
