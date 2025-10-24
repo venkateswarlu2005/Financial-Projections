@@ -13,9 +13,8 @@ const valuationMetrics = [
   { name: "Customer Multiple (₹)", label: "Customer Multiple (₹)", type: "input", addGapAfter: true },
   { name: "Revenue-based Valuation", label: "Revenue-based Valuation", type: "auto" },
   { name: "EBITDA-based Valuation", label: "EBITDA-based Valuation", type: "auto" },
-  { name: "Customer-based Valuation", label: "Customer-based Valuation", type: "auto" }
+  { name: "Customer-based Valuation", label: "Customer-based Valuation", type: "auto" },
 ];
-
 
 interface ValuationProps {
   stressTestData: any;
@@ -35,12 +34,12 @@ const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
 
-  const getDisplayedPeriods = () => {
-    return viewMode === "quarter"
+  const getDisplayedPeriods = () =>
+    viewMode === "quarter"
       ? quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }))
       : yearsList.map((_year, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
-  };
 
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -51,23 +50,38 @@ const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ✅ Fetch valuation data (fixed for Year Wise mode)
   useEffect(() => {
     const fetchData = async () => {
-      if (stressTestingActive && stressTestData) {
-        setSheetData(stressTestData[sheetType]);
-      } else {
-        try {
+      try {
+        if (stressTestingActive && stressTestData) {
+          setSheetData(stressTestData[sheetType]);
+          return;
+        }
+
+        if (viewMode === "year") {
+          // Fetch all 5 years of valuation data for Year Wise mode
+          const allData: any = {};
+          for (let year = 1; year <= 5; year++) {
+            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+            const data = await res.json();
+            allData[`Year ${year}`] = data;
+          }
+          setSheetData(allData);
+        } else {
+          // Fetch selected year only for Quarter Wise
           const yearNum = selectedYear.replace("Year ", "");
           const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
           const data = await res.json();
           setSheetData(data);
-        } catch (err) {
-          console.error("Error fetching valuation data:", err);
         }
+      } catch (err) {
+        console.error("Error fetching valuation data:", err);
       }
     };
+
     fetchData();
-  }, [selectedYear, stressTestingActive, stressTestData]);
+  }, [selectedYear, stressTestingActive, stressTestData, viewMode]);
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
@@ -97,7 +111,8 @@ const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
       console.error("Update error:", err);
     }
   };
-    const handleDownloadCSV = () => {
+
+  const handleDownloadCSV = () => {
     downloadCSV({
       metrics: valuationMetrics,
       sheetData,
@@ -112,6 +127,7 @@ const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
     <div className="revenue">
       <div className="table-wrapper">
         <div className="container mt-4">
+          {/* Header Row */}
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
               Valuation Metrics <span className="info-icon"><BsInfoCircleFill /></span>
@@ -167,12 +183,13 @@ const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
                 <span className="pill-label">Year Wise</span>
               </button>
 
-              <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV} >
+              <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV}>
                 <span className="pill-label">Download</span>
               </button>
             </div>
           </div>
 
+          {/* Table */}
           <table className="table table-borderless table-hover revenue-table">
             <thead>
               <tr>
@@ -182,6 +199,7 @@ const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
                 ))}
               </tr>
             </thead>
+
             <tbody>
               {valuationMetrics.map((metric, idx) => (
                 <React.Fragment key={idx}>
@@ -194,7 +212,15 @@ const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
                     </td>
 
                     {getDisplayedPeriods().map((p, qIdx) => {
-                      const metricData = sheetData?.[metric.label]?.[p.key];
+                      // Dynamic access logic for Year/Quarter
+                      let metricData;
+                      if (viewMode === "year") {
+                        const yearKey = `Year ${p.label.replace("Y", "")}`;
+                        metricData = sheetData?.[yearKey]?.[metric.label]?.[p.key];
+                      } else {
+                        metricData = sheetData?.[metric.label]?.[p.key];
+                      }
+
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
 
@@ -223,7 +249,8 @@ const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (!stressTestingActive && isManager) updateCellAPI(metric.label, qIdx, parseFloat(e.target.value) || 0);
+                                if (!stressTestingActive && isManager)
+                                  updateCellAPI(metric.label, qIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
                                 if (!stressTestingActive && isManager && e.key === "Enter") e.currentTarget.blur();
