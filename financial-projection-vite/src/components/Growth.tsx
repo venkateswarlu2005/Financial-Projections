@@ -15,6 +15,7 @@ const growthMetrics = [
 
   { name: "Social Media Campaigns (Strategy & Design Spends)", label: "Social Media Campaigns (Strategy & Design Spends)", type: "input" },
   { name: "Average Reach from Social Campaigns", label: "Average Reach from Social Campaigns", type: "input", addGapAfter: true },
+
   { name: "ATL Campaigns Spends", label: "ATL Campaigns Spends", type: "input" },
   { name: "Average Reach from ATL", label: "Average Reach from ATL", type: "input", addGapAfter: true },
 
@@ -34,7 +35,6 @@ const growthMetrics = [
   { name: "Total Net Users", label: "Total Net Users", type: "auto" },
   { name: "Cost of Customer Acquisition", label: "Cost of Customer Acquisition", type: "auto" }
 ];
-
 
 interface GrowthProps {
   stressTestData: any;
@@ -76,26 +76,26 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
         setShowDropdown(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (stressTestingActive && stressTestData) {
-        setSheetData(stressTestData[sheetType]);
-      } else {
-        try {
-          const yearNum = selectedYear.replace("Year ", "");
-          const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-          const data = await response.json();
-          setSheetData(data);
-        } catch (err) {
-          console.error("Error fetching sheet data:", err);
-        }
+  const fetchData = async () => {
+    if (stressTestingActive && stressTestData) {
+      setSheetData(stressTestData[sheetType]);
+    } else {
+      try {
+        const yearNum = selectedYear.replace("Year ", "");
+        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const data = await response.json();
+        setSheetData(data);
+      } catch (err) {
+        console.error("Error fetching sheet data:", err);
       }
-    };
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [selectedYear, stressTestingActive, stressTestData]);
 
@@ -119,9 +119,7 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
       const result = await response.json();
 
       if (response.ok && result.status === "success") {
-        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const updatedData = await updated.json();
-        setSheetData(updatedData);
+        await fetchData();
       } else {
         console.error("Error updating cell:", result.message);
       }
@@ -152,6 +150,7 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
       setLoadingAI(false);
     }
   };
+
   const handleDownloadCSV = () => {
     downloadCSV({
       metrics: growthMetrics,
@@ -162,7 +161,6 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
       selectedYear,
     });
   };
-
 
   return (
     <div className="revenue">
@@ -228,9 +226,8 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
               </button>
 
               <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV}>
-               <span className="pill-label">Download</span>
+                <span className="pill-label">Download</span>
               </button>
-
             </div>
           </div>
 
@@ -301,9 +298,11 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
                       );
                     })}
                   </tr>
-                  
+
                   {metric.addGapAfter && (
-                    <tr className="gap-row"><td colSpan={quarters.length + 1}></td></tr>
+                    <tr className="gap-row">
+                      <td colSpan={quarters.length + 1}></td>
+                    </tr>
                   )}
                 </React.Fragment>
               ))}
@@ -316,7 +315,3 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
 };
 
 export default Growth;
-function fetchData() {
-  throw new Error("Function not implemented.");
-}
-
