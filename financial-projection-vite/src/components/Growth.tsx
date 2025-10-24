@@ -8,26 +8,26 @@ const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const yearsList = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 
 const growthMetrics = [
-  { name: "Search Engine & GPT Marketing Spends", label: "Search Engine & GPT Marketing Spends", type: "input" },
-  { name: "Average Reach from Search", label: "Average Reach from Search", type: "input", addGapAfter: true },
-  { name: "Social Media Marketing Spends (Ads)", label: "Social Media Marketing Spends (Ads)", type: "input" },
-  { name: "Average Reach from Social Ads", label: "Average Reach from Social Ads", type: "input", addGapAfter: true },
-  { name: "Social Media Campaigns (Strategy & Design Spends)", label: "Social Media Campaigns (Strategy & Design Spends)", type: "input" },
-  { name: "Average Reach from Social Campaigns", label: "Average Reach from Social Campaigns", type: "input", addGapAfter: true },
-  { name: "ATL Campaigns Spends", label: "ATL Campaigns Spends", type: "input" },
-  { name: "Average Reach from ATL", label: "Average Reach from ATL", type: "input", addGapAfter: true },
-  { name: "Total Spends on Customer Acquisition", label: "Total Spends on Customer Acquisition", type: "auto", addGapAfter: true },
-  { name: "Website Visitors", label: "Website Visitors", type: "auto" },
-  { name: "Sign-Ups / Leads", label: "Sign-Ups / Leads", type: "auto" },
-  { name: "KYC Verified", label: "KYC Verified", type: "auto" },
-  { name: "Activated Accounts", label: "Activated Accounts", type: "auto" },
-  { name: "Active Traders", label: "Active Traders", type: "auto" },
-  { name: "Paying Subscribers", label: "Paying Subscribers", type: "auto" },
-  { name: "AUM Contributors", label: "AUM Contributors", type: "input" },
-  { name: "Churn Rate", label: "Churn Rate", type: "input" },
-  { name: "Users Lost", label: "Users Lost", type: "auto", addGapAfter: true },
-  { name: "Total Net Users", label: "Total Net Users", type: "auto" },
-  { name: "Cost of Customer Acquisition", label: "Cost of Customer Acquisition", type: "auto" }
+  { name: "Search Engine & GPT Marketing Spends", label: "Search Engine & GPT Marketing Spends", type: "input", yearlySum: true },
+  { name: "Average Reach from Search", label: "Average Reach from Search", type: "input", addGapAfter: true, yearlySum: true },
+  { name: "Social Media Marketing Spends (Ads)", label: "Social Media Marketing Spends (Ads)", type: "input", yearlySum: true },
+  { name: "Average Reach from Social Ads", label: "Average Reach from Social Ads", type: "input", addGapAfter: true, yearlySum: true },
+  { name: "Social Media Campaigns (Strategy & Design Spends)", label: "Social Media Campaigns (Strategy & Design Spends)", type: "input", yearlySum: true },
+  { name: "Average Reach from Social Campaigns", label: "Average Reach from Social Campaigns", type: "input", addGapAfter: true, yearlySum: true },
+  { name: "ATL Campaigns Spends", label: "ATL Campaigns Spends", type: "input", yearlySum: true },
+  { name: "Average Reach from ATL", label: "Average Reach from ATL", type: "input", addGapAfter: true, yearlySum: true },
+  { name: "Total Spends on Customer Acquisition", label: "Total Spends on Customer Acquisition", type: "auto", addGapAfter: true, yearlySum: true },
+  { name: "Website Visitors", label: "Website Visitors", type: "auto", yearlySum: true },
+  { name: "Sign-Ups / Leads", label: "Sign-Ups / Leads", type: "auto", yearlySum: true },
+  { name: "KYC Verified", label: "KYC Verified", type: "auto", yearlySum: true },
+  { name: "Activated Accounts", label: "Activated Accounts", type: "auto", yearlySum: false },
+  { name: "Active Traders", label: "Active Traders", type: "auto", yearlySum: false },
+  { name: "Paying Subscribers", label: "Paying Subscribers", type: "auto", yearlySum: false },
+  { name: "AUM Contributors", label: "AUM Contributors", type: "input", yearlySum: false },
+  { name: "Churn Rate", label: "Churn Rate", type: "input", yearlySum: false },
+  { name: "Users Lost", label: "Users Lost", type: "auto", addGapAfter: true, yearlySum: true },
+  { name: "Total Net Users", label: "Total Net Users", type: "auto", yearlySum: false },
+  { name: "Cost of Customer Acquisition", label: "Cost of Customer Acquisition", type: "auto", yearlySum: false }
 ];
 
 interface GrowthProps {
@@ -249,17 +249,22 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
                     </td>
 
                     {getDisplayedQuarters().map((q, qIdx) => {
-                      const yearKey = viewMode === "year" ? `Year ${q.label.replace("Y", "")}` : selectedYear;
-                      const metricData =
-                        viewMode === "year"
-                          ? sheetData?.[yearKey]?.[metric.label]?.[q.key]
-                          : sheetData?.[metric.label]?.[q.key];
-                      const value = metricData?.value ?? 0;
-                      const isCalculated = metricData?.is_calculated ?? false;
+                      let value: number = 0;
+
+                      if (viewMode === "year") {
+                        const yearKey = `Year ${q.label.replace("Y", "")}`;
+                        const yearData = sheetData?.[yearKey]?.[metric.label] || {};
+
+                        value = metric.yearlySum
+                          ? Object.values(yearData).reduce((acc: number, cur: any) => acc + (cur.value ?? 0), 0)
+                          : yearData?.[`Y${q.label.replace("Y", "")}Q4`]?.value ?? 0;
+                      } else {
+                        value = sheetData?.[metric.label]?.[q.key]?.value ?? 0;
+                      }
 
                       return (
                         <td key={qIdx}>
-                          {metric.type === "input" && !isCalculated && viewMode === "quarter" ? (
+                          {metric.type === "input" && viewMode === "quarter" && !sheetData?.[metric.label]?.[q.key]?.is_calculated ? (
                             <input
                               type="number"
                               className="form-control form-control-sm"
