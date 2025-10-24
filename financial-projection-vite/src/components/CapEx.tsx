@@ -33,11 +33,10 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
 
-  const getDisplayedPeriods = () => {
-    return viewMode === "quarter"
+  const getDisplayedPeriods = () =>
+    viewMode === "quarter"
       ? quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }))
       : years.map((_y, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
-  };
 
   const handleDownloadCSV = () => {
     downloadCSV({
@@ -50,7 +49,6 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
     });
   };
 
-  // Close dropdown if clicked outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -61,7 +59,6 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       if (stressTestingActive && stressTestData) {
@@ -69,7 +66,6 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
       } else {
         try {
           if (viewMode === "year") {
-            // fetch all 5 years
             const allData: any = {};
             for (let year = 1; year <= 5; year++) {
               const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
@@ -79,10 +75,8 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
             setSheetData(allData);
           } else {
             const yearNum = selectedYear.replace("Year ", "");
-            const response = await fetch(
-              `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`
-            );
-            const data = await response.json();
+            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+            const data = await res.json();
             setSheetData(data);
           }
         } catch (error) {
@@ -97,7 +91,7 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
     if (stressTestingActive || !isManager) return;
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
-      const response = await fetch("http://localhost:8000/api/update-cell", {
+      const res = await fetch("http://localhost:8000/api/update-cell", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -109,12 +103,10 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
           value,
         }),
       });
-      const result = await response.json();
-      if (response.ok && result.status === "success") {
-        const updated = await fetch(
-          `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`
-        );
-        const updatedData = await updated.json();
+      const result = await res.json();
+      if (res.ok && result.status === "success") {
+        const updatedRes = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const updatedData = await updatedRes.json();
         setSheetData(updatedData);
       } else {
         console.error("Error updating cell:", result.message);
@@ -193,11 +185,12 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
             <thead>
               <tr>
                 <th className="metrics-header">Metrics</th>
-                {getDisplayedPeriods().map((q, i) => (
-                  <th key={i} className="quarter-header">{q.label}</th>
+                {getDisplayedPeriods().map((p, i) => (
+                  <th key={i} className="quarter-header">{p.label}</th>
                 ))}
               </tr>
             </thead>
+
             <tbody>
               {growthMetrics.map((metric, idx) => (
                 <React.Fragment key={idx}>
@@ -209,17 +202,22 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
                       </div>
                     </td>
 
-                    {getDisplayedPeriods().map((q, qIdx) => {
-                      const yearKey = viewMode === "year" ? `Year ${q.label.replace("Y", "")}` : selectedYear;
-                      const metricData =
-                        viewMode === "year"
-                          ? sheetData?.[yearKey]?.[metric.name]?.[q.key]
-                          : sheetData?.[metric.name]?.[q.key];
-                      const value = metricData?.value ?? 0;
-                      const isCalculated = metricData?.is_calculated ?? false;
+                    {getDisplayedPeriods().map((p, pIdx) => {
+                      const yearKey = viewMode === "year" ? `Year ${p.label.replace("Y", "")}` : selectedYear;
+                      let value = 0;
+
+                      if (viewMode === "year") {
+                        // Only take Q4 value for cumulative metrics
+                        const yearData = sheetData?.[yearKey]?.[metric.name] || {};
+                        value = yearData?.[`Y${p.label.replace("Y", "")}Q4`]?.value ?? 0;
+                      } else {
+                        value = sheetData?.[metric.name]?.[p.key]?.value ?? 0;
+                      }
+
+                      const isCalculated = sheetData?.[metric.name]?.[p.key]?.is_calculated ?? false;
 
                       return (
-                        <td key={qIdx}>
+                        <td key={pIdx}>
                           {metric.type === "cumulative" && !isCalculated && viewMode === "quarter" ? (
                             <input
                               type="number"
@@ -238,13 +236,13 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
                                   ...prev,
                                   [metric.name]: {
                                     ...prev[metric.name],
-                                    [q.key]: { value: newValue, is_calculated: false },
+                                    [p.key]: { value: newValue, is_calculated: false },
                                   },
                                 }));
                               }}
                               onBlur={(e) => {
                                 if (!stressTestingActive && isManager)
-                                  updateCellAPI(metric.name, qIdx, parseFloat(e.target.value) || 0);
+                                  updateCellAPI(metric.name, pIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
                                 if (!stressTestingActive && isManager && e.key === "Enter")
@@ -258,6 +256,7 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
                       );
                     })}
                   </tr>
+
                   {metric.addGapAfter && (
                     <tr className="gap-row">
                       <td colSpan={quarters.length + 1}></td>
