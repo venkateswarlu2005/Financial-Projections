@@ -46,29 +46,21 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const [stressTestingActive, setStressTestingActive] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const [sheetData, setSheetData] = useState<any>({});
   const sheetType = "tech-opex";
+  const [sheetData, setSheetData] = useState<any>({});
 
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
 
-  const getDisplayedPeriods = () => {
-    if (viewMode === "quarter") {
-      return quarters.map((q, i) => ({
-        label: q,
-        key: getQuarterKey(selectedYear, i),
-      }));
-    } else {
-      return years.map((_year, i) => ({
-        label: `Y${i + 1}`,
-        key: `Y${i + 1}Q4`,
-      }));
-    }
-  };
+  const getDisplayedPeriods = () =>
+    viewMode === "quarter"
+      ? quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }))
+      : years.map((_y, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
 
+  // Handle outside click for dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -79,33 +71,42 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch data for quarter or year view
   useEffect(() => {
     const fetchData = async () => {
-      if (stressTestingActive && stressTestData) {
-        setSheetData(stressTestData[sheetType]);
-      } else {
-        try {
-          const yearNum = selectedYear.replace("Year ", "");
-          const response = await fetch(
-            `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`
-          );
-          const data = await response.json();
-          setSheetData(data);
-        } catch (error) {
-          console.error("Error fetching sheet data:", error);
+      try {
+        if (stressTestingActive && stressTestData) {
+          setSheetData(stressTestData[sheetType]);
+          return;
         }
+
+        if (viewMode === "year") {
+          const allData: any = {};
+          for (let year = 1; year <= 5; year++) {
+            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+            const data = await res.json();
+            allData[`Year ${year}`] = data;
+          }
+          setSheetData(allData);
+        } else {
+          const yearNum = selectedYear.replace("Year ", "");
+          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+          const data = await res.json();
+          setSheetData(data);
+        }
+      } catch (err) {
+        console.error("Error fetching tech Opex data:", err);
       }
     };
 
     fetchData();
-  }, [selectedYear, stressTestingActive, stressTestData]);
+  }, [viewMode, selectedYear, stressTestingActive, stressTestData]);
 
-  const updateCellAPI = async (fieldName: string, periodIdx: number, value: number) => {
+  const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
-
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
-      const response = await fetch("http://localhost:8000/api/update-cell", {
+      const res = await fetch("http://localhost:8000/api/update-cell", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -113,36 +114,33 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
           sheet_type: sheetType,
           field_name: fieldName,
           year_num: yearNum,
-          quarter_num: periodIdx + 1,
-          value: value,
+          quarter_num: quarterIdx + 1,
+          value,
         }),
       });
-
-      const result = await response.json();
-      if (response.ok && result.status === "success") {
-        const updated = await fetch(
-          `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`
-        );
-        const updatedData = await updated.json();
+      const result = await res.json();
+      if (res.ok && result.status === "success") {
+        const updatedRes = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const updatedData = await updatedRes.json();
         setSheetData(updatedData);
       } else {
         console.error("Error updating cell:", result.message);
       }
-    } catch (error) {
-      console.error("Update error:", error);
+    } catch (err) {
+      console.error("Update error:", err);
     }
   };
-  const handleDownloadCSV = () => {
-  downloadCSV({
-    metrics: techOpex,
-    sheetData,
-    displayedQuarters: getDisplayedPeriods(),
-    sheetType,
-    viewMode,
-    selectedYear,
-  });
-};
 
+  const handleDownloadCSV = () => {
+    downloadCSV({
+      metrics: techOpex,
+      sheetData,
+      displayedQuarters: getDisplayedPeriods(),
+      sheetType,
+      viewMode,
+      selectedYear,
+    });
+  };
 
   return (
     <div className="revenue">
@@ -197,10 +195,7 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
 
               <button
                 className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
-                onClick={() => {
-                  setViewMode("year");
-                  setShowDropdown(false);
-                }}
+                onClick={() => setViewMode("year")}
               >
                 <span className="circle-indicator" />
                 <span className="pill-label">Year Wise</span>
@@ -209,7 +204,6 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
               <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV}>
                 <span className="pill-label">Download</span>
               </button>
-
             </div>
           </div>
 
@@ -222,6 +216,7 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
                 ))}
               </tr>
             </thead>
+
             <tbody>
               {techOpex.map((metric, idx) => (
                 <React.Fragment key={idx}>
@@ -232,8 +227,13 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
                         {metric.type === "input" ? "Input" : "Auto"}
                       </div>
                     </td>
+
                     {getDisplayedPeriods().map((p, pIdx) => {
-                      const metricData = sheetData?.[metric.name]?.[p.key];
+                      const yearKey = viewMode === "year" ? `Year ${p.label.replace("Y", "")}` : selectedYear;
+                      const metricData =
+                        viewMode === "year"
+                          ? sheetData?.[yearKey]?.[metric.name]?.[p.key]
+                          : sheetData?.[metric.name]?.[p.key];
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
 
@@ -245,15 +245,11 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
                               className="form-control form-control-sm"
                               value={value}
                               readOnly={stressTestingActive || !isManager}
-                              style={
-                                stressTestingActive || !isManager
-                                  ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
-                                  : {}
-                              }
+                              style={stressTestingActive || !isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
-                                setSheetData((prev: { [x: string]: { [x: string]: any; }; }) => ({
+                                setSheetData((prev: any) => ({
                                   ...prev,
                                   [metric.name]: {
                                     ...prev[metric.name],
@@ -261,18 +257,17 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
                                       ...prev[metric.name]?.[p.key],
                                       value: newValue,
                                       is_calculated: false,
-                                    }
-                                  }
+                                    },
+                                  },
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (stressTestingActive || !isManager) return;
-                                const newValue = parseFloat(e.target.value) || 0;
-                                updateCellAPI(metric.name, pIdx, newValue);
+                                if (!stressTestingActive && isManager)
+                                  updateCellAPI(metric.name, pIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
-                                if (stressTestingActive || !isManager) return;
-                                if (e.key === "Enter") e.currentTarget.blur();
+                                if (!stressTestingActive && isManager && e.key === "Enter")
+                                  e.currentTarget.blur();
                               }}
                             />
                           ) : (
