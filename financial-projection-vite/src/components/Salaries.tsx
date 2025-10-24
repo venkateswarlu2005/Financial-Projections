@@ -15,7 +15,6 @@ const Metrics = [
   { name: "Cluster Heads Count", type: "input" },
   { name: "Cluster Heads Average Salary", type: "input" },
   { name: "Management & Domain Expert Cost", type: "calculated", addGapAfter: true },
-
   { name: "Economists Count", type: "input" },
   { name: "Economists Average Salary", type: "input" },
   { name: "Technical Analysts Count", type: "input" },
@@ -29,11 +28,9 @@ const Metrics = [
   { name: "Data Scientists Count", type: "input" },
   { name: "Data Scientists Average Salary", type: "input" },
   { name: "Subject Level Expert Cost", type: "calculated" },
-
   { name: "Independent Directors Count", type: "input" },
   { name: "Independent Directors Average Salary", type: "input" },
   { name: "Board of Directors Cost", type: "calculated", addGapAfter: true },
-
   { name: "Marketing Head Count", type: "input" },
   { name: "Marketing Head Average Salary", type: "input" },
   { name: "BD Head Count", type: "input" },
@@ -55,7 +52,6 @@ const Metrics = [
   { name: "Technology Head Count", type: "input" },
   { name: "Technology Head Average Salary", type: "input" },
   { name: "Functional Heads Cost", type: "calculated", addGapAfter: true },
-
   { name: "Senior Developers Count", type: "input" },
   { name: "Senior Developers Average Salary", type: "input" },
   { name: "Junior Developers Count", type: "input" },
@@ -65,7 +61,6 @@ const Metrics = [
   { name: "Designers Count", type: "input" },
   { name: "Designers Average Salary", type: "input" },
   { name: "Engineering Team Cost", type: "calculated", addGapAfter: true },
-
   { name: "Marketing Managers Count", type: "input" },
   { name: "Marketing Managers Average Salary", type: "input" },
   { name: "Marketing Executives Count", type: "input" },
@@ -73,22 +68,17 @@ const Metrics = [
   { name: "RMs Count", type: "input" },
   { name: "RMs Average Salary", type: "input" },
   { name: "Marketing Team Cost", type: "calculated", addGapAfter: true },
-
   { name: "Compliance Officers Count", type: "input" },
   { name: "Compliance Officers Average Salary", type: "input" },
   { name: "Grievance Officer Count", type: "input" },
   { name: "Grievance Officer Average Salary", type: "input" },
   { name: "Compliance Team Cost", type: "calculated", addGapAfter: true },
-
   { name: "Research Engineers Count", type: "input" },
   { name: "Research Engineers Average Salary", type: "input" },
   { name: "R&D Team Cost", type: "calculated", addGapAfter: true },
-
   { name: "Support Executives Count", type: "input" },
   { name: "Support Executives Average Salary", type: "input" },
   { name: "Support Staff Cost", type: "calculated", addGapAfter: true },
-  
-
   { name: "Total Salary Cost", type: "calculated" }
 ];
 
@@ -110,14 +100,12 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
 
-  const getDisplayedPeriods = () => {
-    if (viewMode === "quarter") {
-      return quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }));
-    } else {
-      return years.map((_year, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
-    }
-  };
+  const getDisplayedPeriods = () =>
+    viewMode === "quarter"
+      ? quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }))
+      : years.map((_y, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
 
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -128,29 +116,42 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch logic updated for year-wise view
   useEffect(() => {
     const fetchData = async () => {
-      if (stressTestingActive && stressTestData) {
-        setSheetData(stressTestData[sheetType]);
-      } else {
-        try {
-          const yearNum = selectedYear.replace("Year ", "");
-          const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-          const data = await response.json();
-          setSheetData(data);
-        } catch (error) {
-          console.error("Error fetching salaries data:", error);
+      try {
+        if (stressTestingActive && stressTestData) {
+          setSheetData(stressTestData[sheetType]);
+          return;
         }
+
+        if (viewMode === "year") {
+          // fetch all years
+          const allData: any = {};
+          for (let year = 1; year <= 5; year++) {
+            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+            const data = await res.json();
+            allData[`Year ${year}`] = data;
+          }
+          setSheetData(allData);
+        } else {
+          const yearNum = selectedYear.replace("Year ", "");
+          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+          const data = await res.json();
+          setSheetData(data);
+        }
+      } catch (err) {
+        console.error("Error fetching salaries data:", err);
       }
     };
     fetchData();
-  }, [selectedYear, stressTestingActive, stressTestData]);
+  }, [viewMode, selectedYear, stressTestingActive, stressTestData]);
 
   const updateCellAPI = async (fieldName: string, periodIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
-      const response = await fetch("http://localhost:8000/api/update-cell", {
+      const res = await fetch("http://localhost:8000/api/update-cell", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -159,35 +160,32 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
           field_name: fieldName,
           year_num: yearNum,
           quarter_num: periodIdx + 1,
-          value,
-        }),
+          value
+        })
       });
-      const result = await response.json();
-
-      if (response.ok && result.status === "success") {
-        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const updatedData = await updated.json();
+      const result = await res.json();
+      if (res.ok && result.status === "success") {
+        const updatedRes = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const updatedData = await updatedRes.json();
         setSheetData(updatedData);
       } else {
         console.error("Error updating cell:", result.message);
       }
-    } catch (error) {
-      console.error("Update error:", error);
+    } catch (err) {
+      console.error("Update error:", err);
     }
   };
-// 🟢 Add this inside Salaries component (you already have it)
-const handleDownloadCSV = () => {
-  downloadCSV({
-    metrics: Metrics,
-    sheetData,
-    displayedQuarters: getDisplayedPeriods(), // ✅ fixed here
-    sheetType,
-    viewMode,
-    selectedYear,
-  });
-};
 
-
+  const handleDownloadCSV = () => {
+    downloadCSV({
+      metrics: Metrics,
+      sheetData,
+      displayedQuarters: getDisplayedPeriods(),
+      sheetType,
+      viewMode,
+      selectedYear,
+    });
+  };
 
   return (
     <div className="revenue">
@@ -212,10 +210,7 @@ const handleDownloadCSV = () => {
               <div className="position-relative" ref={dropdownRef}>
                 <button
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
-                  onClick={() => {
-                    setViewMode("quarter");
-                    setShowDropdown(prev => !prev);
-                  }}
+                  onClick={() => { setViewMode("quarter"); setShowDropdown(prev => !prev); }}
                 >
                   <span className="circle-indicator" />
                   <span className="pill-label">Quarter Wise</span>
@@ -227,10 +222,7 @@ const handleDownloadCSV = () => {
                       <div
                         key={year}
                         className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
-                        onClick={() => {
-                          setSelectedYear(year);
-                          setShowDropdown(false);
-                        }}
+                        onClick={() => { setSelectedYear(year); setShowDropdown(false); }}
                       >
                         <span className={`radio-circle ${selectedYear === year ? "filled" : ""}`} />
                         {year}
@@ -251,7 +243,6 @@ const handleDownloadCSV = () => {
               <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV}>
                 <span className="pill-label">Download</span>
               </button>
-
             </div>
           </div>
 
@@ -274,8 +265,13 @@ const handleDownloadCSV = () => {
                         {metric.type === "input" ? "Input" : "Auto"}
                       </div>
                     </td>
+
                     {getDisplayedPeriods().map((p, pIdx) => {
-                      const metricData = sheetData?.[metric.name]?.[p.key];
+                      const yearKey = viewMode === "year" ? `Year ${p.label.replace("Y", "")}` : selectedYear;
+                      const metricData =
+                        viewMode === "year"
+                          ? sheetData?.[yearKey]?.[metric.name]?.[p.key]
+                          : sheetData?.[metric.name]?.[p.key];
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
 
@@ -304,14 +300,12 @@ const handleDownloadCSV = () => {
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (!stressTestingActive && isManager) {
+                                if (!stressTestingActive && isManager)
                                   updateCellAPI(metric.name, pIdx, parseFloat(e.target.value) || 0);
-                                }
                               }}
                               onKeyDown={(e) => {
-                                if (!stressTestingActive && isManager && e.key === "Enter") {
+                                if (!stressTestingActive && isManager && e.key === "Enter")
                                   e.currentTarget.blur();
-                                }
                               }}
                             />
                           ) : (
@@ -321,6 +315,7 @@ const handleDownloadCSV = () => {
                       );
                     })}
                   </tr>
+
                   {metric.addGapAfter && (
                     <tr className="gap-row">
                       <td colSpan={quarters.length + 1}></td>
