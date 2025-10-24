@@ -36,6 +36,7 @@ const growthMetrics = [
   { name: "Cost of Customer Acquisition", label: "Cost of Customer Acquisition", type: "auto" }
 ];
 
+
 interface GrowthProps {
   stressTestData: any;
 }
@@ -62,17 +63,16 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
         label: q,
         key: getQuarterKey(selectedYear, i),
       }));
-    } else {
-      return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((_y, i) => ({
-        label: `Y${i + 1}`,
-        key: `Y${i + 1}Q4`,
-      }));
     }
+    return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((_y, i) => ({
+      label: `Y${i + 1}`,
+      key: `Y${i + 1}Q4`,
+    }));
   };
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
       }
     };
@@ -86,7 +86,9 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
     } else {
       try {
         const yearNum = selectedYear.replace("Year ", "");
-        const response = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const response = await fetch(
+          `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`
+        );
         const data = await response.json();
         setSheetData(data);
       } catch (err) {
@@ -99,53 +101,43 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
     fetchData();
   }, [selectedYear, stressTestingActive, stressTestData]);
 
-  const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
+  const updateCellAPI = async (field: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
     const yearNum = parseInt(selectedYear.replace("Year ", ""));
     try {
-      const response = await fetch("http://localhost:8000/api/update-cell", {
+      const res = await fetch("http://localhost:8000/api/update-cell", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           company_id: 1,
           sheet_type: sheetType,
-          field_name: fieldName,
+          field_name: field,
           year_num: yearNum,
           quarter_num: quarterIdx + 1,
           value,
         }),
       });
-
-      const result = await response.json();
-
-      if (response.ok && result.status === "success") {
-        await fetchData();
-      } else {
-        console.error("Error updating cell:", result.message);
-      }
-    } catch (error) {
-      console.error("Update error:", error);
+      const result = await res.json();
+      if (res.ok && result.status === "success") await fetchData();
+      else console.error("Update failed:", result.message);
+    } catch (err) {
+      console.error("Update error:", err);
     }
   };
 
-  const getAIReachSuggestions = async () => {
-    const yearNum = selectedYear.replace("Year ", "");
+  const handleAISuggestions = async () => {
     setLoadingAI(true);
     try {
-      const response = await fetch("http://localhost:8000/api/auto-populate-reach", {
+      const yearNum = selectedYear.replace("Year ", "");
+      const res = await fetch("http://localhost:8000/api/auto-populate-reach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ company_id: 1, year: yearNum }),
       });
-
-      const data = await response.json();
-      if (response.ok && data.status === "success") {
-        await fetchData();
-      } else {
-        console.error("AI suggestion failed:", data.message);
-      }
-    } catch (error) {
-      console.error("Error getting AI reach suggestions:", error);
+      const data = await res.json();
+      if (res.ok && data.status === "success") await fetchData();
+    } catch (err) {
+      console.error("AI fetch error:", err);
     } finally {
       setLoadingAI(false);
     }
@@ -166,26 +158,34 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
     <div className="revenue">
       <div className="table-wrapper">
         <div className="container mt-4">
+          {/* Header Section */}
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
-              Growth Metrics <span className="info-icon"><BsInfoCircleFill /></span>
+              Growth Metrics{" "}
+              <span className="info-icon">
+                <BsInfoCircleFill />
+              </span>
             </h5>
 
             <div className="d-flex gap-2 btn-group-pill-toggle">
               {!isManager && (
                 <button
                   className={`pill-toggle-btn ${stressTestingActive ? "active" : ""}`}
-                  onClick={() => setStressTestingActive(prev => !prev)}
+                  onClick={() => setStressTestingActive((prev) => !prev)}
                 >
                   <span className="circle-indicator" />
                   <span className="pill-label">Stress Testing</span>
                 </button>
               )}
 
+              {/* Quarter/Year Toggle */}
               <div className="position-relative" ref={dropdownRef}>
                 <button
                   className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
-                  onClick={() => { setViewMode("quarter"); setShowDropdown(prev => !prev); }}
+                  onClick={() => {
+                    setViewMode("quarter");
+                    setShowDropdown((p) => !p);
+                  }}
                 >
                   <span className="circle-indicator" />
                   <span className="pill-label">Quarter Wise</span>
@@ -193,14 +193,23 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
 
                 {showDropdown && (
                   <div className="custom-dropdown">
-                    {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
+                    {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((y, i) => (
                       <div
-                        key={idx}
-                        className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
-                        onClick={() => { setSelectedYear(year); setShowDropdown(false); }}
+                        key={i}
+                        className={`dropdown-item-pill ${
+                          selectedYear === y ? "selected" : ""
+                        }`}
+                        onClick={() => {
+                          setSelectedYear(y);
+                          setShowDropdown(false);
+                        }}
                       >
-                        <span className={`radio-circle ${selectedYear === year ? "filled" : ""}`} />
-                        {year}
+                        <span
+                          className={`radio-circle ${
+                            selectedYear === y ? "filled" : ""
+                          }`}
+                        />
+                        {y}
                       </div>
                     ))}
                   </div>
@@ -209,7 +218,10 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
 
               <button
                 className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
-                onClick={() => { setViewMode("year"); setShowDropdown(false); }}
+                onClick={() => {
+                  setViewMode("year");
+                  setShowDropdown(false);
+                }}
               >
                 <span className="circle-indicator" />
                 <span className="pill-label">Year Wise</span>
@@ -217,7 +229,7 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
 
               <button
                 className="pill-toggle-btn no-dot"
-                onClick={getAIReachSuggestions}
+                onClick={handleAISuggestions}
                 disabled={loadingAI}
               >
                 <span className="pill-label">
@@ -231,12 +243,15 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
             </div>
           </div>
 
+          {/* Table Section */}
           <table className="table table-borderless table-hover revenue-table">
             <thead>
               <tr>
                 <th className="metrics-header">Metrics</th>
                 {getDisplayedQuarters().map((q, i) => (
-                  <th key={i} className="quarter-header">{q.label}</th>
+                  <th key={i} className="quarter-header">
+                    {q.label}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -253,42 +268,45 @@ const Growth: React.FC<GrowthProps> = ({ stressTestData }) => {
                     </td>
 
                     {getDisplayedQuarters().map((q, qIdx) => {
-                      const metricData = sheetData?.[metric.label]?.[q.key];
-                      const value = metricData?.value ?? 0;
-                      const isCalculated = metricData?.is_calculated ?? false;
+                      const data = sheetData?.[metric.label]?.[q.key];
+                      const value = data?.value ?? 0;
+                      const isCalc = data?.is_calculated ?? false;
 
                       return (
                         <td key={qIdx}>
-                          {metric.type === "input" && !isCalculated && viewMode === "quarter" ? (
+                          {metric.type === "input" && !isCalc && viewMode === "quarter" ? (
                             <input
                               type="number"
                               className="form-control form-control-sm"
                               value={value}
                               readOnly={stressTestingActive || !isManager}
-                              style={stressTestingActive || !isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              style={
+                                stressTestingActive || !isManager
+                                  ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+                                  : {}
+                              }
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
-                                const newValue = parseFloat(e.target.value) || 0;
+                                const val = parseFloat(e.target.value) || 0;
                                 setSheetData((prev: any) => ({
                                   ...prev,
                                   [metric.label]: {
                                     ...prev[metric.label],
                                     [q.key]: {
                                       ...prev[metric.label]?.[q.key],
-                                      value: newValue,
+                                      value: val,
                                       is_calculated: false,
                                     },
                                   },
                                 }));
                               }}
-                              onBlur={(e) => {
-                                if (stressTestingActive || !isManager) return;
-                                updateCellAPI(metric.label, qIdx, parseFloat(e.target.value) || 0);
-                              }}
+                              onBlur={(e) =>
+                                !stressTestingActive &&
+                                isManager &&
+                                updateCellAPI(metric.label, qIdx, parseFloat(e.target.value) || 0)
+                              }
                               onKeyDown={(e) => {
-                                if (!stressTestingActive && isManager && e.key === "Enter") {
-                                  e.currentTarget.blur();
-                                }
+                                if (isManager && e.key === "Enter") e.currentTarget.blur();
                               }}
                             />
                           ) : (
