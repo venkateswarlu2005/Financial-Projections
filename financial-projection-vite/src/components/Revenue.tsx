@@ -7,43 +7,44 @@ import { downloadCSV } from "../utils/downloadCSV";
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const yearsList = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 
+// Define all revenue metrics here
 const metricItems = [
-  { name: "Average Brokerage Per User Per Trade", label: "Average Brokerage Per User Per Trade", type: "input" },
-  { name: "Average No of Trades Per Day Per User", label: "Average No of Trades Per Day Per User", type: "input" },
-  { name: "Active Trading Users", label: "Active Trading Users", type: "auto" },
-  { name: "Brokerage Revenue", label: "Brokerage Revenue", type: "auto", addGapAfter: true },
-  { name: "Average AUM per Active User (₹)", label: "Average AUM per Active User (₹)", type: "input" },
-  { name: "Average Active PMS Users", label: "Average Active PMS Users", type: "auto" },
-  { name: "Management Fee from PMS", label: "Management Fee from PMS", type: "input" },
-  { name: "PMS Revenue", label: "PMS Revenue", type: "auto", addGapAfter: true },
-  { name: "AI Subscription Revenue Per User (₹)", label: "AI Subscription Revenue Per User (₹)", type: "input" },
-  { name: "Average Active Subscription Users", label: "Average Active Subscription Users", type: "auto" },
-  { name: "Revenue from Subscriptions", label: "Revenue from Subscriptions", type: "auto", addGapAfter: true },
-  { name: "Average Monthly AUM MF", label: "Average Monthly AUM MF", type: "input" },
-  { name: "Average Monthly Revenue", label: "Average Monthly Revenue", type: "auto", addGapAfter: true },
-  { name: "Average Ideal Broking Funds", label: "Average Ideal Broking Funds", type: "input" },
-  { name: "Revenue from Broking Interest", label: "Revenue from Broking Interest", type: "auto", addGapAfter: true },
-  { name: "Average Market Investment", label: "Average Market Investment", type: "input" },
-  { name: "Average Revenue from Investments", label: "Average Revenue from Investments", type: "auto" },
-  { name: "Average no of user per month FPI", label: "Average no of user per month FPI", type: "input" },
-  { name: "Average Brokerage Per User", label: "Average Brokerage Per User", type: "input", addGapAfter: true },
-  { name: "Average Trade Per User", label: "Average Trade Per User", type: "input" },
-  { name: "Average AUM per User (₹)", label: "Average AUM per User (₹)", type: "input" },
-  { name: "Revenue from FPI", label: "Revenue from FPI", type: "auto", addGapAfter: true },
-  { name: "Relationship Management Variable Pay Average", label: "Relationship Management Variable Pay Average", type: "input" },
-  { name: "Average AUM from RMs", label: "Average AUM from RMs", type: "auto" },
-  { name: "Revenue from AUMs", label: "Revenue from AUMs", type: "auto", addGapAfter: true },
-  { name: "Embedded Financial Service", label: "Embedded Financial Service", type: "input" },
-  { name: "Digi Banking - CASA Interest", label: "Digi Banking - CASA Interest", type: "auto" },
-  { name: "Digi Banking - Cards Income", label: "Digi Banking - Cards Income", type: "auto", addGapAfter: true },
-  { name: "Digi Insurance - Premium Average", label: "Digi Insurance - Premium Average", type: "input" },
-  { name: "Insurance Premium Margin", label: "Insurance Premium Margin", type: "input" },
-  { name: "Net Insurance Income", label: "Net Insurance Income", type: "auto", addGapAfter: true },
-  { name: "Cross Border Payments and Investment Average Amount", label: "Cross Border Payments and Investment Average Amount", type: "input" },
-  { name: "Average Payment Gateway Transactions", label: "Average Payment Gateway Transactions", type: "input" },
-  { name: "Fee Per Transaction", label: "Fee Per Transaction", type: "input", addGapAfter: true },
-  { name: "Total Revenue", label: "Total Revenue", type: "auto" },
-  { name: "Average Revenue Per User", label: "Average Revenue Per User", type: "auto" },
+  { name: "Average Brokerage Per User Per Trade", type: "input" },
+  { name: "Average No of Trades Per Day Per User", type: "input" },
+  { name: "Active Trading Users", type: "auto" },
+  { name: "Brokerage Revenue", type: "auto", addGapAfter: true },
+  { name: "Average AUM per Active User (₹)", type: "input" },
+  { name: "Average Active PMS Users", type: "auto" },
+  { name: "Management Fee from PMS", type: "input" },
+  { name: "PMS Revenue", type: "auto", addGapAfter: true },
+  { name: "AI Subscription Revenue Per User (₹)", type: "input" },
+  { name: "Average Active Subscription Users", type: "auto" },
+  { name: "Revenue from Subscriptions", type: "auto", addGapAfter: true },
+  { name: "Average Monthly AUM MF", type: "input" },
+  { name: "Average Monthly Revenue", type: "auto", addGapAfter: true },
+  { name: "Average Ideal Broking Funds", type: "input" },
+  { name: "Revenue from Broking Interest", type: "auto", addGapAfter: true },
+  { name: "Average Market Investment", type: "input" },
+  { name: "Average Revenue from Investments", type: "auto" },
+  { name: "Average no of user per month FPI", type: "input" },
+  { name: "Average Brokerage Per User", type: "input", addGapAfter: true },
+  { name: "Average Trade Per User", type: "input" },
+  { name: "Average AUM per User (₹)", type: "input" },
+  { name: "Revenue from FPI", type: "auto", addGapAfter: true },
+  { name: "Relationship Management Variable Pay Average", type: "input" },
+  { name: "Average AUM from RMs", type: "auto" },
+  { name: "Revenue from AUMs", type: "auto", addGapAfter: true },
+  { name: "Embedded Financial Service", type: "input" },
+  { name: "Digi Banking - CASA Interest", type: "auto" },
+  { name: "Digi Banking - Cards Income", type: "auto", addGapAfter: true },
+  { name: "Digi Insurance - Premium Average", type: "input" },
+  { name: "Insurance Premium Margin", type: "input" },
+  { name: "Net Insurance Income", type: "auto", addGapAfter: true },
+  { name: "Cross Border Payments and Investment Average Amount", type: "input" },
+  { name: "Average Payment Gateway Transactions", type: "input" },
+  { name: "Fee Per Transaction", type: "input", addGapAfter: true },
+  { name: "Total Revenue", type: "auto" },
+  { name: "Average Revenue Per User", type: "auto" },
 ];
 
 interface RevenueProps {
@@ -68,6 +69,7 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
       ? quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }))
       : yearsList.map((_y, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
 
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node))
@@ -77,7 +79,7 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ✅ Updated fetch logic for both modes
+  // Fetch sheet data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -85,7 +87,6 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
           setSheetData(stressTestData[sheetType]);
           return;
         }
-
         if (viewMode === "year") {
           const allData: any = {};
           for (let year = 1; year <= 5; year++) {
@@ -226,7 +227,7 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
                 <React.Fragment key={idx}>
                   <tr className="align-middle">
                     <td>
-                      <div className="mb-1">{metric.label}</div>
+                      <div className="mb-1">{metric.name}</div>
                       <div className="text-muted" style={{ fontSize: "12px" }}>
                         {metric.type === "input" ? "Input" : "Auto"}
                       </div>
@@ -236,8 +237,8 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
                         viewMode === "year" ? `Year ${q.label.replace("Y", "")}` : selectedYear;
                       const metricData =
                         viewMode === "year"
-                          ? sheetData?.[yearKey]?.[metric.label]?.[q.key]
-                          : sheetData?.[metric.label]?.[q.key];
+                          ? sheetData?.[yearKey]?.[metric.name]?.[q.key]
+                          : sheetData?.[metric.name]?.[q.key];
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
 
@@ -259,10 +260,10 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
                                 const newVal = parseFloat(e.target.value) || 0;
                                 setSheetData((prev: any) => ({
                                   ...prev,
-                                  [metric.label]: {
-                                    ...prev[metric.label],
+                                  [metric.name]: {
+                                    ...prev[metric.name],
                                     [q.key]: {
-                                      ...prev[metric.label]?.[q.key],
+                                      ...prev[metric.name]?.[q.key],
                                       value: newVal,
                                       is_calculated: false,
                                     },
@@ -271,7 +272,7 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
                               }}
                               onBlur={(e) => {
                                 if (!stressTestingActive && isManager)
-                                  updateCellAPI(metric.label, qIdx, parseFloat(e.target.value) || 0);
+                                  updateCellAPI(metric.name, qIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
                                 if (!stressTestingActive && isManager && e.key === "Enter")
