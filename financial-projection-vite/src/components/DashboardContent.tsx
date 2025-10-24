@@ -30,6 +30,9 @@ ChartJS.register(
 export default function Dashboard() {
   const { isManager } = useContext(RoleContext);
 
+  const [selectedYear, setSelectedYear] = useState<number>(1);
+  const years = [1, 2, 3, 4, 5];
+
   const [growthData, setGrowthData] = useState<number[]>([]);
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [dpData, setDpData] = useState<number[]>([]);
@@ -48,7 +51,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchGrowthData = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/sheet-data/growth-funnel/1`);
+        const res = await fetch(`http://localhost:8000/api/sheet-data/growth-funnel/${selectedYear}`);
         const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> =
           await res.json();
 
@@ -69,13 +72,13 @@ export default function Dashboard() {
       }
     };
     fetchGrowthData();
-  }, []);
+  }, [selectedYear]);
 
   // --- Fetch DP Evaluation ---
   useEffect(() => {
     const fetchDPData = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/sheet-data/dp-evaluation/1`);
+        const res = await fetch(`http://localhost:8000/api/sheet-data/dp-evaluation/${selectedYear}`);
         const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> =
           await res.json();
 
@@ -95,78 +98,63 @@ export default function Dashboard() {
       }
     };
     fetchDPData();
-  }, []);
+  }, [selectedYear]);
 
   // --- Fetch Revenue ---
+  const fetchRevenueForYear = async (year: number) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/${year}`);
+      const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> =
+        await res.json();
+
+      // Total Revenue
+      const totalRevenueRow = apiData["Total Revenue"];
+      if (!totalRevenueRow) return;
+
+      const quarters = Object.keys(totalRevenueRow).sort();
+      const values = quarters.map((q) => totalRevenueRow[q]?.value ?? 0);
+      setRevenueLabels(quarters);
+      setRevenueData(values);
+
+      // Revenue Breakdown
+      const revenueKeys = [
+        "Total Brokerage Revenue",
+        "Total PMS Revenue",
+        "Revenue from Subscriptions",
+        "Revenue from Broking Interest",
+        "Revenue from FPI",
+        "Revenue from AUMs",
+        "Net Insurance Income",
+      ];
+      const latestQuarter = quarters[quarters.length - 1];
+      const breakdownValues = revenueKeys.map((key) => apiData[key]?.[latestQuarter]?.value ?? 0);
+      setRevenueBreakdownData(breakdownValues);
+      setRevenueBreakdownLabels(revenueKeys);
+    } catch (err) {
+      console.error("Error fetching revenue data:", err);
+    }
+  };
+
   useEffect(() => {
-    const fetchRevenueData = async () => {
-      try {
-        const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/1`);
-        const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> =
-          await res.json();
-
-        const totalRevenueRow = apiData["Total Revenue"];
-        if (!totalRevenueRow) return;
-
-        const quarters = Object.keys(totalRevenueRow).sort();
-        const values = quarters.map((q) => totalRevenueRow[q]?.value ?? 0);
-
-        setRevenueLabels(quarters);
-        setRevenueData(values);
-      } catch (err) {
-        console.error("Error fetching total revenue data:", err);
-      }
-    };
-    fetchRevenueData();
-  }, []);
-
-  // --- Fetch Revenue Breakdown ---
-  useEffect(() => {
-    const fetchRevenueBreakdown = async () => {
-      try {
-        const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/1`);
-        const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> =
-          await res.json();
-
-        const revenueKeys = [
-          "Total Brokerage Revenue",
-          "Total PMS Revenue",
-          "Revenue from Subscriptions",
-          "Revenue from Broking Interest",
-          "Revenue from FPI",
-          "Revenue from AUMs",
-          "Net Insurance Income",
-        ];
-
-        const latestQuarter = Object.keys(apiData["Total Revenue"]).sort().pop();
-        if (!latestQuarter) return;
-
-        const values = revenueKeys.map((key) => apiData[key]?.[latestQuarter]?.value ?? 0);
-        setRevenueBreakdownData(values);
-        setRevenueBreakdownLabels(revenueKeys);
-      } catch (err) {
-        console.error("Error fetching revenue breakdown data:", err);
-      }
-    };
-    fetchRevenueBreakdown();
-  }, []);
+    fetchRevenueForYear(selectedYear);
+  }, [selectedYear]);
 
   // --- Fetch LTV / CAC Ratio ---
   useEffect(() => {
     const fetchLtvCac = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/sheet-data/unit-economics/1`);
+        const res = await fetch(`http://localhost:8000/api/sheet-data/unit-economics/${selectedYear}`);
         const apiData: Record<string, Record<string, { value: number; is_calculated: boolean }>> =
           await res.json();
 
         const ltvRow = apiData["LTV/CAC Ratio"];
-        if (ltvRow?.Y1Q1) setLtvCacRatio(ltvRow["Y1Q1"].value);
+        if (ltvRow) setLtvCacRatio(ltvRow[`Y${selectedYear}Q1`]?.value ?? null);
       } catch (err) {
         console.error("Error fetching LTV/CAC ratio:", err);
       }
     };
     fetchLtvCac();
-  }, []);
+  }, [selectedYear]);
 
   // --- Fetch Closed Round ---
   useEffect(() => {
@@ -187,6 +175,7 @@ export default function Dashboard() {
   const saveClosedRound = async () => {
     setClosedRound(closedRoundInput);
     setEditingClosedRound(false);
+
     try {
       const res = await fetch(`http://localhost:8000/api/closed-round`, {
         method: "POST",
@@ -194,6 +183,7 @@ export default function Dashboard() {
         body: JSON.stringify({ value: closedRoundInput }),
       });
       const data = await res.json();
+
       if (data.status !== "success") console.error("Failed to update closed round on backend");
     } catch (err) {
       console.error("Error updating closed round:", err);
@@ -271,7 +261,7 @@ export default function Dashboard() {
           title="LTV / CAC Ratio (Q1)"
           value={ltvCacRatio !== null ? ltvCacRatio.toFixed(2) : "N/A"}
         />
-        <Card key="card-3" title="Monthly Churn Rate" value={`3,75,000`} />
+        <Card key="card-3" title="Monthly churn Rate" value={`3,75,000`} />
         <Card
           key="card-4"
           title="Closed Round"
@@ -306,7 +296,15 @@ export default function Dashboard() {
 
       {/* Charts */}
       <div className="charts-grid">
-        <ChartCard key="chart-0" title="Revenue Projections" value="" subText="">
+        <ChartCard
+          key="chart-0"
+          title="Revenue Projections"
+          value=""
+          subText=""
+          years={years}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
+        >
           <Line
             data={revenueChartData}
             options={{
@@ -324,7 +322,15 @@ export default function Dashboard() {
           />
         </ChartCard>
 
-        <ChartCard key="chart-4" title="Revenue Breakdown" value="" subText="">
+        <ChartCard
+          key="chart-4"
+          title="Revenue Breakdown"
+          value=""
+          subText=""
+          years={years}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
+        >
           <Doughnut
             data={revenuePieChartData}
             options={{
@@ -346,14 +352,30 @@ export default function Dashboard() {
           />
         </ChartCard>
 
-        <ChartCard key="chart-2" title="Customer Growth" value="" subText="">
+        <ChartCard
+          key="chart-2"
+          title="Customer Growth"
+          value=""
+          subText=""
+          years={years}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
+        >
           <Bar
             data={growthChartData}
             options={{ responsive: true, maintainAspectRatio: false }}
           />
         </ChartCard>
 
-        <ChartCard key="chart-3" title="DP-Evaluation" value="" subText="">
+        <ChartCard
+          key="chart-3"
+          title="DP-Evaluation"
+          value=""
+          subText=""
+          years={years}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
+        >
           <Line data={dpChartData} options={{ responsive: true, maintainAspectRatio: false }} />
         </ChartCard>
       </div>
@@ -381,15 +403,33 @@ interface ChartCardProps {
   value: string | number;
   subText: string;
   children: React.ReactNode;
+  selectedYear?: number;
+  years?: number[];
+  onYearChange?: (year: number) => void;
 }
 
-function ChartCard({ title, value, subText, children }: ChartCardProps) {
+function ChartCard({ title, value, subText, children, selectedYear, years, onYearChange }: ChartCardProps) {
   return (
     <div className="chart-card">
-      <div className="chart-header">
-        <div className="chart-title">{title}</div>
-        <div className="chart-value">{value}</div>
-        <div className="chart-subtext">{subText}</div>
+      <div className="chart-header" style={{ display: "flex", justifyContent: "space-between" }}>
+        <div>
+          <div className="chart-title">{title}</div>
+          <div className="chart-value">{value}</div>
+          <div className="chart-subtext">{subText}</div>
+        </div>
+        {years && onYearChange && (
+          <select
+            value={selectedYear}
+            onChange={(e) => onYearChange(Number(e.target.value))}
+            className="year-selector"
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>
+                Year {y}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       <div className="chart-body">{children}</div>
     </div>
