@@ -54,6 +54,40 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Helper: compute yearly data
+  const computeYearlyData = (yearData: any, yearNum: number) => {
+    const yearly: any = {};
+
+    capexMetrics.forEach(metric => {
+      if (["Total Revenue", "Total Salary Cost", "Total Tech & OpEx", "Total Customer Acquisition Spends", "M&A Costs", "Total Operating Costs", "EBITDA"].includes(metric.label)) {
+        // Sum all quarters
+        let sum = 0;
+        quarters.forEach((_, qIdx) => {
+          const val = yearData?.[metric.label]?.[`Y${yearNum}Q${qIdx + 1}`]?.value ?? 0;
+          sum += val;
+        });
+        yearly[metric.label] = { value: sum, is_calculated: true };
+      } else if (metric.label === "EBITDA Margin (%)") {
+        // will calculate after summing EBITDA and Revenue
+        yearly[metric.label] = { value: 0, is_calculated: true };
+      } else {
+        // Use last quarter (Q4) for other metrics
+        const lastQ = yearData?.[metric.label]?.[`Y${yearNum}Q4`]?.value ?? 0;
+        yearly[metric.label] = { value: lastQ, is_calculated: true };
+      }
+    });
+
+    // Calculate EBITDA Margin (%)
+    const totalEBITDA = yearly["EBITDA"]?.value ?? 0;
+    const totalRevenue = yearly["Total Revenue"]?.value ?? 0;
+    yearly["EBITDA Margin (%)"] = {
+      value: totalRevenue !== 0 ? (totalEBITDA / totalRevenue) * 100 : 0,
+      is_calculated: true
+    };
+
+    return yearly;
+  };
+
   // Fetch sheet data
   useEffect(() => {
     const fetchData = async () => {
@@ -64,16 +98,14 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
         }
 
         if (viewMode === "year") {
-          // Fetch all 5 years when Year Wise view is active
           const allData: any = {};
           for (let year = 1; year <= 5; year++) {
             const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
             const data = await res.json();
-            allData[`Year ${year}`] = data;
+            allData[`Year ${year}`] = computeYearlyData(data, year);
           }
           setSheetData(allData);
         } else {
-          // Fetch only selected year for Quarter Wise view
           const yearNum = selectedYear.replace("Year ", "");
           const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
           const data = await res.json();
@@ -214,11 +246,10 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
                     </td>
 
                     {getDisplayedQuarters().map((q, qIdx) => {
-                      // Dynamic access logic depending on viewMode
                       let metricData;
                       if (viewMode === "year") {
                         const yearKey = `Year ${q.label.replace("Y", "")}`;
-                        metricData = sheetData?.[yearKey]?.[metric.label]?.[q.key];
+                        metricData = sheetData?.[yearKey]?.[metric.label];
                       } else {
                         metricData = sheetData?.[metric.label]?.[q.key];
                       }
@@ -238,7 +269,7 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
-                                setSheetData((prev: { [x: string]: { [x: string]: any } }) => ({
+                                setSheetData((prev: any) => ({
                                   ...prev,
                                   [metric.label]: {
                                     ...prev[metric.label],
@@ -259,7 +290,11 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
                               }}
                             />
                           ) : (
-                            <span>{value.toLocaleString("en-IN")}</span>
+                            <span>
+                              {metric.label === "EBITDA Margin (%)"
+                                ? value.toFixed(2) + " %"
+                                : value.toLocaleString("en-IN")}
+                            </span>
                           )}
                         </td>
                       );
