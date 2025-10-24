@@ -7,44 +7,45 @@ import { downloadCSV } from "../utils/downloadCSV";
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const yearsList = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 
-// Define all revenue metrics here
+// Define all revenue metrics with yearlySum flag
 const metricItems = [
-  { name: "Average Brokerage Per User Per Trade", type: "input" },
-  { name: "Average No of Trades Per Day Per User", type: "input" },
-  { name: "Active Trading Users", type: "auto" },
-  { name: "Brokerage Revenue", type: "auto", addGapAfter: true },
-  { name: "Average AUM per Active User (₹)", type: "input" },
-  { name: "Average Active PMS Users", type: "auto" },
-  { name: "Management Fee from PMS", type: "input" },
-  { name: "PMS Revenue", type: "auto", addGapAfter: true },
-  { name: "AI Subscription Revenue Per User (₹)", type: "input" },
-  { name: "Average Active Subscription Users", type: "auto" },
-  { name: "Revenue from Subscriptions", type: "auto", addGapAfter: true },
-  { name: "Average Monthly AUM MF", type: "input" },
-  { name: "Average Monthly Revenue", type: "auto", addGapAfter: true },
-  { name: "Average Ideal Broking Funds", type: "input" },
-  { name: "Revenue from Broking Interest", type: "auto", addGapAfter: true },
-  { name: "Average Market Investment", type: "input" },
-  { name: "Average Revenue from Investments", type: "auto" },
-  { name: "Average no of user per month FPI", type: "input" },
-  { name: "Average Brokerage Per User", type: "input", addGapAfter: true },
-  { name: "Average Trade Per User", type: "input" },
-  { name: "Average AUM per User (₹)", type: "input" },
-  { name: "Revenue from FPI", type: "auto", addGapAfter: true },
-  { name: "Relationship Management Variable Pay Average", type: "input" },
-  { name: "Average AUM from RMs", type: "auto" },
-  { name: "Revenue from AUMs", type: "auto", addGapAfter: true },
-  { name: "Embedded Financial Service", type: "input" },
-  { name: "Digi Banking - CASA Interest", type: "auto" },
-  { name: "Digi Banking - Cards Income", type: "auto", addGapAfter: true },
-  { name: "Digi Insurance - Premium Average", type: "input" },
-  { name: "Insurance Premium Margin", type: "input" },
-  { name: "Net Insurance Income", type: "auto", addGapAfter: true },
-  { name: "Cross Border Payments and Investment Average Amount", type: "input" },
-  { name: "Average Payment Gateway Transactions", type: "input" },
-  { name: "Fee Per Transaction", type: "input", addGapAfter: true },
-  { name: "Total Revenue", type: "auto" },
-  { name: "Average Revenue Per User", type: "auto" },
+  // YearlySum: false → snapshot / average / rate, YearlySum: true → flows
+  { name: "Average Brokerage Per User Per Trade", type: "input", yearlySum: false },
+  { name: "Average No of Trades Per Day Per User", type: "input", yearlySum: false },
+  { name: "Active Trading Users", type: "auto", yearlySum: false },
+  { name: "Brokerage Revenue", type: "auto", addGapAfter: true, yearlySum: true },
+  { name: "Average AUM per Active User (₹)", type: "input", yearlySum: false },
+  { name: "Average Active PMS Users", type: "auto", yearlySum: false },
+  { name: "Management Fee from PMS", type: "input", yearlySum: false },
+  { name: "PMS Revenue", type: "auto", addGapAfter: true, yearlySum: true },
+  { name: "AI Subscription Revenue Per User (₹)", type: "input", yearlySum: false },
+  { name: "Average Active Subscription Users", type: "auto", yearlySum: false },
+  { name: "Revenue from Subscriptions", type: "auto", addGapAfter: true, yearlySum: true },
+  { name: "Average Monthly AUM MF", type: "input", yearlySum: false },
+  { name: "Average Monthly Revenue", type: "auto", addGapAfter: true, yearlySum: true },
+  { name: "Average Ideal Broking Funds", type: "input", yearlySum: false },
+  { name: "Revenue from Broking Interest", type: "auto", addGapAfter: true, yearlySum: true },
+  { name: "Average Market Investment", type: "input", yearlySum: false },
+  { name: "Average Revenue from Investments", type: "auto", yearlySum: true },
+  { name: "Average no of user per month FPI", type: "input", yearlySum: false },
+  { name: "Average Brokerage Per User", type: "input", addGapAfter: true, yearlySum: false },
+  { name: "Average Trade Per User", type: "input", yearlySum: false },
+  { name: "Average AUM per User (₹)", type: "input", yearlySum: false },
+  { name: "Revenue from FPI", type: "auto", addGapAfter: true, yearlySum: true },
+  { name: "Relationship Management Variable Pay Average", type: "input", yearlySum: false },
+  { name: "Average AUM from RMs", type: "auto", yearlySum: false },
+  { name: "Revenue from AUMs", type: "auto", addGapAfter: true, yearlySum: true },
+  { name: "Embedded Financial Service", type: "input", yearlySum: false },
+  { name: "Digi Banking - CASA Interest", type: "auto", yearlySum: true },
+  { name: "Digi Banking - Cards Income", type: "auto", addGapAfter: true, yearlySum: true },
+  { name: "Digi Insurance - Premium Average", type: "input", yearlySum: false },
+  { name: "Insurance Premium Margin", type: "input", yearlySum: false },
+  { name: "Net Insurance Income", type: "auto", addGapAfter: true, yearlySum: true },
+  { name: "Cross Border Payments and Investment Average Amount", type: "input", yearlySum: false },
+  { name: "Average Payment Gateway Transactions", type: "input", yearlySum: false },
+  { name: "Fee Per Transaction", type: "input", addGapAfter: true, yearlySum: false },
+  { name: "Total Revenue", type: "auto", yearlySum: true },
+  { name: "Average Revenue Per User", type: "auto", yearlySum: false },
 ];
 
 interface RevenueProps {
@@ -233,14 +234,25 @@ const Revenue: React.FC<RevenueProps> = ({ stressTestData }) => {
                       </div>
                     </td>
                     {getDisplayedQuarters().map((q, qIdx) => {
-                      const yearKey =
-                        viewMode === "year" ? `Year ${q.label.replace("Y", "")}` : selectedYear;
-                      const metricData =
-                        viewMode === "year"
-                          ? sheetData?.[yearKey]?.[metric.name]?.[q.key]
-                          : sheetData?.[metric.name]?.[q.key];
-                      const value = metricData?.value ?? 0;
-                      const isCalculated = metricData?.is_calculated ?? false;
+                      let value: number = 0;
+                      const yearKey = viewMode === "year" ? `Year ${q.label.replace("Y", "")}` : selectedYear;
+
+                      if (viewMode === "year") {
+                        const yearData = sheetData?.[yearKey]?.[metric.name] || {};
+                        if (metric.yearlySum) {
+                          value = Object.values(yearData).reduce(
+                            (acc: number, cur: any) => acc + (cur.value ?? 0),
+                            0
+                          );
+                        } else {
+                          // snapshot/average → Q4 only
+                          value = yearData?.[`Y${q.label.replace("Y", "")}Q4`]?.value ?? 0;
+                        }
+                      } else {
+                        value = sheetData?.[metric.name]?.[q.key]?.value ?? 0;
+                      }
+
+                      const isCalculated = sheetData?.[metric.name]?.[q.key]?.is_calculated ?? false;
 
                       return (
                         <td key={qIdx}>
