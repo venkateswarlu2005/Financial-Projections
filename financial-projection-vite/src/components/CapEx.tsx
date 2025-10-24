@@ -5,6 +5,7 @@ import { RoleContext } from "../App";
 import { downloadCSV } from "../utils/downloadCSV";
 
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
+const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 
 const growthMetrics = [
   { name: "Fixed Deposits", type: "cumulative" },
@@ -32,26 +33,22 @@ const CapEx: React.FC<CapExProps> = ({ stressTestData }) => {
   const getQuarterKey = (year: string, quarterIdx: number) =>
     `Y${year.replace("Year ", "")}Q${quarterIdx + 1}`;
 
-  const getDisplayedQuarters = () => {
+  const getDisplayedPeriods = () => {
     return viewMode === "quarter"
       ? quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }))
-      : ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((_y, i) => ({
-          label: `Y${i + 1}`,
-          key: `Y${i + 1}Q4`,
-        }));
+      : years.map((_y, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
   };
 
-const handleDownloadCSV = () => {
-  downloadCSV({
-    metrics: growthMetrics,
-    sheetData,
-    displayedQuarters: getDisplayedQuarters(),
-    sheetType,
-    viewMode,
-    selectedYear,
-  });
-};
-
+  const handleDownloadCSV = () => {
+    downloadCSV({
+      metrics: growthMetrics,
+      sheetData,
+      displayedQuarters: getDisplayedPeriods(),
+      sheetType,
+      viewMode,
+      selectedYear,
+    });
+  };
 
   // Close dropdown if clicked outside
   useEffect(() => {
@@ -71,19 +68,30 @@ const handleDownloadCSV = () => {
         setSheetData(stressTestData[sheetType]);
       } else {
         try {
-          const yearNum = selectedYear.replace("Year ", "");
-          const response = await fetch(
-            `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`
-          );
-          const data = await response.json();
-          setSheetData(data);
+          if (viewMode === "year") {
+            // fetch all 5 years
+            const allData: any = {};
+            for (let year = 1; year <= 5; year++) {
+              const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+              const data = await res.json();
+              allData[`Year ${year}`] = data;
+            }
+            setSheetData(allData);
+          } else {
+            const yearNum = selectedYear.replace("Year ", "");
+            const response = await fetch(
+              `http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`
+            );
+            const data = await response.json();
+            setSheetData(data);
+          }
         } catch (error) {
           console.error("Error fetching sheet data:", error);
         }
       }
     };
     fetchData();
-  }, [selectedYear, stressTestingActive, stressTestData]);
+  }, [selectedYear, viewMode, stressTestingActive, stressTestData]);
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
@@ -150,9 +158,9 @@ const handleDownloadCSV = () => {
 
                 {showDropdown && (
                   <div className="custom-dropdown">
-                    {["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].map((year, idx) => (
+                    {years.map((year) => (
                       <div
-                        key={idx}
+                        key={year}
                         className={`dropdown-item-pill ${selectedYear === year ? "selected" : ""}`}
                         onClick={() => {
                           setSelectedYear(year);
@@ -175,7 +183,6 @@ const handleDownloadCSV = () => {
                 <span className="pill-label">Year Wise</span>
               </button>
 
-              {/* 🟢 Download Button */}
               <button className="pill-toggle-btn no-dot" onClick={handleDownloadCSV}>
                 <span className="pill-label">Download</span>
               </button>
@@ -186,10 +193,8 @@ const handleDownloadCSV = () => {
             <thead>
               <tr>
                 <th className="metrics-header">Metrics</th>
-                {getDisplayedQuarters().map((q, i) => (
-                  <th key={i} className="quarter-header">
-                    {q.label}
-                  </th>
+                {getDisplayedPeriods().map((q, i) => (
+                  <th key={i} className="quarter-header">{q.label}</th>
                 ))}
               </tr>
             </thead>
@@ -203,15 +208,19 @@ const handleDownloadCSV = () => {
                         {metric.type === "cumulative" ? "Input" : "Auto"}
                       </div>
                     </td>
-                    {getDisplayedQuarters().map((q, qIdx) => {
-                      const metricData = sheetData?.[metric.name]?.[q.key];
+
+                    {getDisplayedPeriods().map((q, qIdx) => {
+                      const yearKey = viewMode === "year" ? `Year ${q.label.replace("Y", "")}` : selectedYear;
+                      const metricData =
+                        viewMode === "year"
+                          ? sheetData?.[yearKey]?.[metric.name]?.[q.key]
+                          : sheetData?.[metric.name]?.[q.key];
                       const value = metricData?.value ?? 0;
                       const isCalculated = metricData?.is_calculated ?? false;
+
                       return (
                         <td key={qIdx}>
-                          {metric.type === "cumulative" &&
-                          !isCalculated &&
-                          viewMode === "quarter" ? (
+                          {metric.type === "cumulative" && !isCalculated && viewMode === "quarter" ? (
                             <input
                               type="number"
                               className="form-control form-control-sm"
@@ -229,11 +238,7 @@ const handleDownloadCSV = () => {
                                   ...prev,
                                   [metric.name]: {
                                     ...prev[metric.name],
-                                    [q.key]: {
-                                      ...prev[metric.name]?.[q.key],
-                                      value: newValue,
-                                      is_calculated: false,
-                                    },
+                                    [q.key]: { value: newValue, is_calculated: false },
                                   },
                                 }));
                               }}
