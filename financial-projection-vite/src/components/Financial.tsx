@@ -89,35 +89,80 @@ const Financial: React.FC<FinancialProps> = ({ stressTestData }) => {
   };
 
   // Fetch sheet data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (stressTestingActive && stressTestData) {
-          setSheetData(stressTestData[sheetType]);
-          return;
-        }
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      if (stressTestingActive && stressTestData) {
+        const stressData = stressTestData[sheetType];
 
         if (viewMode === "year") {
-          const allData: any = {};
-          for (let year = 1; year <= 5; year++) {
-            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
-            const data = await res.json();
-            allData[`Year ${year}`] = computeYearlyData(data, year);
-          }
-          setSheetData(allData);
-        } else {
-          const yearNum = selectedYear.replace("Year ", "");
-          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-          const data = await res.json();
-          setSheetData(data);
-        }
-      } catch (error) {
-        console.error("Error fetching sheet data:", error);
-      }
-    };
+          const yearlyData: any = {};
 
-    fetchData();
-  }, [selectedYear, stressTestingActive, stressTestData, viewMode]);
+          ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].forEach((year, yIdx) => {
+            const yearNum = yIdx + 1;
+            const yearly: any = {};
+
+            capexMetrics.forEach(metric => {
+              const metricData = stressData[metric.label] || {};
+              const quarterKeys = ["Q1", "Q2", "Q3", "Q4"].map((q, i) => `Y${yearNum}Q${i + 1}`);
+
+              if (metric.type === "auto") {
+                if (metric.label === "EBITDA Margin (%)") {
+                  yearly[metric.label] = { value: 0, is_calculated: true }; // calculate later
+                } else {
+                  // Sum all quarters
+                  const sum = quarterKeys.reduce((acc, qKey) => acc + (metricData[qKey]?.value ?? 0), 0);
+                  yearly[metric.label] = { value: sum, is_calculated: true };
+                }
+              } else {
+                // For inputs, take Q4 snapshot
+                yearly[metric.label] = { value: metricData[`Y${yearNum}Q4`]?.value ?? 0, is_calculated: true };
+              }
+            });
+
+            // Compute EBITDA Margin (%) = EBITDA / Total Revenue * 100
+            const totalEBITDA = yearly["EBITDA"]?.value ?? 0;
+            const totalRevenue = yearly["Total Revenue"]?.value ?? 0;
+            yearly["EBITDA Margin (%)"] = {
+              value: totalRevenue !== 0 ? (totalEBITDA / totalRevenue) * 100 : 0,
+              is_calculated: true
+            };
+
+            yearlyData[year] = yearly;
+          });
+
+          setSheetData(yearlyData);
+        } else {
+          // Quarter view: just use stress data directly
+          setSheetData(stressData);
+        }
+
+        return;
+      }
+
+      // Normal API fetch
+      if (viewMode === "year") {
+        const allData: any = {};
+        for (let year = 1; year <= 5; year++) {
+          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+          const data = await res.json();
+          allData[`Year ${year}`] = computeYearlyData(data, year);
+        }
+        setSheetData(allData);
+      } else {
+        const yearNum = selectedYear.replace("Year ", "");
+        const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const data = await res.json();
+        setSheetData(data);
+      }
+    } catch (error) {
+      console.error("Error fetching sheet data:", error);
+    }
+  };
+
+  fetchData();
+}, [selectedYear, viewMode, stressTestingActive, stressTestData]);
+
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
