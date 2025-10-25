@@ -45,7 +45,7 @@ export default function Dashboard() {
   const [revenueBreakdownLabels, setRevenueBreakdownLabels] = useState<string[]>(
     []
   );
-
+  
   // --- State for Year-Wise Data ---
   const [growthDataYearly, setGrowthDataYearly] = useState<number[]>([]);
   const [dpDataYearly, setDpDataYearly] = useState<number[]>([]);
@@ -232,6 +232,9 @@ export default function Dashboard() {
   }, []);
 
   // --- Fetch LTV / CAC Ratio ---
+  // This seems to be a single-value card, so no quarterly/yearly fetch needed here
+  // But we need to fetch it when the dashboard loads.
+  // We'll also fetch the *first year's* data for all charts on initial load.
   useEffect(() => {
     const fetchLtvCac = async (year: number) => {
       try {
@@ -241,6 +244,7 @@ export default function Dashboard() {
         const apiData = await res.json();
         const ltvRow = apiData["LTV/CAC Ratio"];
         // NOTE: This logic seems to only get Q1 of the specified year.
+        // You might want to adjust this logic if it needs to be dynamic.
         if (ltvRow) setLtvCacRatio(ltvRow[`Y${year}Q1`]?.value ?? null);
       } catch (err) {
         console.error("Error fetching LTV/CAC ratio:", err);
@@ -249,6 +253,8 @@ export default function Dashboard() {
 
     // Fetch initial data for Year 1
     fetchLtvCac(1);
+    // Note: The ChartCard components will trigger their own initial fetches for Year 1
+    // because of their internal useEffect hooks.
   }, []);
 
   // --- Fetch/Save Closed Round ---
@@ -487,7 +493,7 @@ function ChartCard({
           style={{ display: "flex", alignItems: "center", gap: "10px" }}
         >
           {/* Quarter/Year toggle - HIDE FOR DOUGHNUT */}
-          {chartType !== "doughnut" && (
+          
             <div className="pill-toggle">
               <button
                 className={`pill-toggle-btn ${
@@ -506,7 +512,7 @@ function ChartCard({
                 Year Wise
               </button>
             </div>
-          )}
+          
 
           {/* Year Dropdown - HIDE FOR YEAR WISE MODE */}
           {viewMode === "quarter" && (
