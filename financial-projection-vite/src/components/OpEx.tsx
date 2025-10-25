@@ -71,35 +71,67 @@ const OpEx: React.FC<OpExProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (stressTestingActive && stressTestData) {
-          setSheetData(stressTestData[sheetType]);
-          return;
-        }
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      if (stressTestingActive && stressTestData) {
+        const stressData = stressTestData[sheetType];
 
         if (viewMode === "year") {
-          const allData: any = {};
-          for (let year = 1; year <= 5; year++) {
-            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
-            const data = await res.json();
-            allData[`Year ${year}`] = data;
-          }
-          setSheetData(allData);
-        } else {
-          const yearNum = selectedYear.replace("Year ", "");
-          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-          const data = await res.json();
-          setSheetData(data);
-        }
-      } catch (err) {
-        console.error("Error fetching tech Opex data:", err);
-      }
-    };
+          const yearlyData: any = {};
+          years.forEach((year, yIdx) => {
+            yearlyData[year] = {};
+            techOpex.forEach((metric) => {
+              const metricData = stressData[metric.name] || {};
+              const yearKey = `Y${yIdx + 1}Q`;
 
-    fetchData();
-  }, [viewMode, selectedYear, stressTestingActive, stressTestData]);
+              if (metric.yearlySum) {
+                // Sum all quarters for the year
+                const sum = Object.keys(metricData)
+                  .filter(k => k.startsWith(yearKey))
+                  .reduce((acc, k) => acc + (metricData[k]?.value ?? 0), 0);
+
+                yearlyData[year][metric.name] = {
+                  [`Y${yIdx + 1}Q4`]: { value: sum, is_calculated: true },
+                };
+              } else {
+                // Q4 snapshot
+                yearlyData[year][metric.name] = {
+                  [`Y${yIdx + 1}Q4`]: { value: metricData[`${yearKey}4`]?.value ?? 0, is_calculated: true },
+                };
+              }
+            });
+          });
+          setSheetData(yearlyData);
+        } else {
+          setSheetData(stressData);
+        }
+        return;
+      }
+
+      // Normal fetch
+      if (viewMode === "year") {
+        const allData: any = {};
+        for (let year = 1; year <= 5; year++) {
+          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+          const data = await res.json();
+          allData[`Year ${year}`] = data;
+        }
+        setSheetData(allData);
+      } else {
+        const yearNum = selectedYear.replace("Year ", "");
+        const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const data = await res.json();
+        setSheetData(data);
+      }
+    } catch (err) {
+      console.error("Error fetching tech Opex data:", err);
+    }
+  };
+
+  fetchData();
+}, [viewMode, selectedYear, stressTestingActive, stressTestData]);
+
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
