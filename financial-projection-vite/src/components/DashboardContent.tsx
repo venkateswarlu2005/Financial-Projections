@@ -282,6 +282,17 @@ function ChartCard({
 
   // Determine chart component
   const renderChart = () => {
+    let borderColor = "#22c55e"; // Default green for others
+    let backgroundColor = "rgba(34,197,94,0.3)"; // Default green for others
+
+    if (title === "Customer Growth") {
+      borderColor = "#f97316"; // Orange
+      backgroundColor = "rgba(249,115,22,0.6)"; // Orange with transparency
+    } else if (title === "DP-Evaluation") {
+      borderColor = "#2563eb"; // Blue
+      backgroundColor = "rgba(37,99,235,0.3)"; // Blue with transparency
+    }
+
     const data = {
       labels: chartLabels,
       datasets:
@@ -290,13 +301,13 @@ function ChartCard({
               {
                 data: chartData,
                 backgroundColor: [
-                  "#f97316",
-                  "#2563eb",
-                  "#22c55e",
-                  "#facc15",
-                  "#8b5cf6",
-                  "#ec4899",
-                  "#14b8a6",
+                  "#f97316", // orange
+                  "#2563eb", // blue
+                  "#22c55e", // green
+                  "#facc15", // yellow
+                  "#8b5cf6", // purple
+                  "#ec4899", // pink
+                  "#14b8a6", // teal
                 ],
               },
             ]
@@ -304,8 +315,8 @@ function ChartCard({
               {
                 label: title,
                 data: chartData,
-                borderColor: "#22c55e",
-                backgroundColor: "rgba(34,197,94,0.3)",
+                borderColor: borderColor, // Use dynamic border color
+                backgroundColor: backgroundColor, // Use dynamic background color
                 fill: true,
                 tension: 0.3,
               },
