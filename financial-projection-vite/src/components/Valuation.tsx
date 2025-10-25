@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useContext } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import "./Revenue.css";
 import { BsInfoCircleFill } from "react-icons/bs";
 import { RoleContext } from "../App";
@@ -25,10 +25,9 @@ const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const [stressTestingActive, setStressTestingActive] = useState(false);
-
   const [sheetData, setSheetData] = useState<any>({});
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const sheetType = "valuation";
 
   const getQuarterKey = (year: string, quarterIdx: number) =>
@@ -50,88 +49,65 @@ const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ✅ Fetch valuation data (fixed for Year Wise mode)
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      // ✅ Handle stress testing data first
-      if (stressTestingActive && stressTestData) {
-        const stressData = stressTestData[sheetType];
+  // Fetch sheet data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (stressTestingActive && stressTestData) {
+          const stressData = stressTestData[sheetType];
 
-        if (viewMode === "year") {
-          const yearlyData: any = {};
-          yearsList.forEach((year, yIdx) => {
-            const yearNum = yIdx + 1;
-            const yearly: any = {};
+          if (viewMode === "year") {
+            const yearlyData: any = {};
+            yearsList.forEach((year, yIdx) => {
+              yearlyData[year] = {};
+              valuationMetrics.forEach((metric) => {
+                const yearKey = `Y${yIdx + 1}Q`;
+                const metricData = stressData[metric.label] || {};
 
-            valuationMetrics.forEach(metric => {
-              const metricData = stressData[metric.label] || {};
-              const quarterKeys = ["Q1", "Q2", "Q3", "Q4"].map((q, qIdx) => `Y${yearNum}Q${qIdx + 1}`);
-
-              if (metric.type === "auto") {
-                if (metric.label.includes("Valuation")) {
-                  // Compute auto valuation metrics based on input multiples
-                  let value = 0;
-                  if (metric.label === "Revenue-based Valuation") {
-                    const revenueMultiple = stressData["Revenue Multiple"]?.[`Y${yearNum}Q4`]?.value ?? 0;
-                    const revenue = stressData["Revenue"]?.[`Y${yearNum}Q4`]?.value ?? 0;
-                    value = revenue * revenueMultiple;
-                  } else if (metric.label === "EBITDA-based Valuation") {
-                    const ebitdaMultiple = stressData["EBITDA Multiple"]?.[`Y${yearNum}Q4`]?.value ?? 0;
-                    const ebitda = stressData["EBITDA"]?.[`Y${yearNum}Q4`]?.value ?? 0;
-                    value = ebitda * ebitdaMultiple;
-                  } else if (metric.label === "Customer-based Valuation") {
-                    const customerMultiple = stressData["Customer Multiple (₹)"]?.[`Y${yearNum}Q4`]?.value ?? 0;
-                    const customers = stressData["Customers"]?.[`Y${yearNum}Q4`]?.value ?? 0;
-                    value = customers * customerMultiple;
+                if (metric.type === "auto") {
+                  // sum all quarters for auto-calculated metrics
+                  let sum = 0;
+                  for (let q = 1; q <= 4; q++) {
+                    sum += metricData[`${yearKey}${q}`]?.value ?? 0;
                   }
-                  yearly[metric.label] = { value, is_calculated: true };
+                  yearlyData[year][metric.label] = { [`Y${yIdx + 1}Q4`]: { value: sum, is_calculated: true } };
                 } else {
-                  // Default: sum Q1-Q4
-                  const sum = quarterKeys.reduce((acc, qKey) => acc + (metricData[qKey]?.value ?? 0), 0);
-                  yearly[metric.label] = { value: sum, is_calculated: true };
+                  // snapshot → Q4 only
+                  yearlyData[year][metric.label] = {
+                    [`Y${yIdx + 1}Q4`]: { value: metricData[`${yearKey}4`]?.value ?? 0, is_calculated: true },
+                  };
                 }
-              } else {
-                // Inputs: take Q4 snapshot for year
-                yearly[metric.label] = { value: metricData[`Y${yearNum}Q4`]?.value ?? 0, is_calculated: true };
-              }
+              });
             });
+            setSheetData(yearlyData);
+          } else {
+            setSheetData(stressData);
+          }
+          return;
+        }
 
-            yearlyData[year] = yearly;
-          });
-
-          setSheetData(yearlyData);
+        // Normal fetching
+        if (viewMode === "year") {
+          const allData: any = {};
+          for (let year = 1; year <= 5; year++) {
+            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+            const data = await res.json();
+            allData[`Year ${year}`] = data;
+          }
+          setSheetData(allData);
         } else {
-          // Quarter view: use stress data directly
-          setSheetData(stressData);
-        }
-
-        return;
-      }
-
-      // Normal API fetch
-      if (viewMode === "year") {
-        const allData: any = {};
-        for (let year = 1; year <= 5; year++) {
-          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+          const yearNum = selectedYear.replace("Year ", "");
+          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
           const data = await res.json();
-          allData[`Year ${year}`] = data;
+          setSheetData(data);
         }
-        setSheetData(allData);
-      } else {
-        const yearNum = selectedYear.replace("Year ", "");
-        const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const data = await res.json();
-        setSheetData(data);
+      } catch (err) {
+        console.error("Error fetching valuation data:", err);
       }
-    } catch (err) {
-      console.error("Error fetching valuation data:", err);
-    }
-  };
+    };
 
-  fetchData();
-}, [selectedYear, viewMode, stressTestingActive, stressTestData]);
-
+    fetchData();
+  }, [viewMode, selectedYear, stressTestingActive, stressTestData]);
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
@@ -151,8 +127,8 @@ useEffect(() => {
       });
       const result = await res.json();
       if (res.ok && result.status === "success") {
-        const updated = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-        const updatedData = await updated.json();
+        const updatedRes = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const updatedData = await updatedRes.json();
         setSheetData(updatedData);
       } else {
         console.error("Error updating valuation cell:", result.message);
@@ -177,7 +153,6 @@ useEffect(() => {
     <div className="revenue">
       <div className="table-wrapper">
         <div className="container mt-4">
-          {/* Header Row */}
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5>
               Valuation Metrics <span className="info-icon"><BsInfoCircleFill /></span>
@@ -239,7 +214,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Table */}
           <table className="table table-borderless table-hover revenue-table">
             <thead>
               <tr>
@@ -249,7 +223,6 @@ useEffect(() => {
                 ))}
               </tr>
             </thead>
-
             <tbody>
               {valuationMetrics.map((metric, idx) => (
                 <React.Fragment key={idx}>
@@ -262,17 +235,19 @@ useEffect(() => {
                     </td>
 
                     {getDisplayedPeriods().map((p, qIdx) => {
-                      // Dynamic access logic for Year/Quarter
-                      let metricData;
+                      let value = 0;
+                      let isCalculated = false;
+
                       if (viewMode === "year") {
                         const yearKey = `Year ${p.label.replace("Y", "")}`;
-                        metricData = sheetData?.[yearKey]?.[metric.label]?.[p.key];
+                        const yearData = sheetData?.[yearKey]?.[metric.label] || {};
+                        value = yearData?.[`Y${p.label.replace("Y", "")}Q4`]?.value ?? 0;
+                        isCalculated = true;
                       } else {
-                        metricData = sheetData?.[metric.label]?.[p.key];
+                        const cellData = sheetData?.[metric.label]?.[p.key];
+                        value = cellData?.value ?? 0;
+                        isCalculated = cellData?.is_calculated ?? false;
                       }
-
-                      const value = metricData?.value ?? 0;
-                      const isCalculated = metricData?.is_calculated ?? false;
 
                       return (
                         <td key={qIdx}>
@@ -282,17 +257,21 @@ useEffect(() => {
                               className="form-control form-control-sm"
                               value={value}
                               readOnly={stressTestingActive || !isManager}
-                              style={stressTestingActive || !isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              style={
+                                stressTestingActive || !isManager
+                                  ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+                                  : {}
+                              }
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
-                                const newValue = parseFloat(e.target.value) || 0;
+                                const newVal = parseFloat(e.target.value) || 0;
                                 setSheetData((prev: any) => ({
                                   ...prev,
                                   [metric.label]: {
                                     ...prev[metric.label],
                                     [p.key]: {
                                       ...prev[metric.label]?.[p.key],
-                                      value: newValue,
+                                      value: newVal,
                                       is_calculated: false,
                                     },
                                   },
@@ -303,7 +282,8 @@ useEffect(() => {
                                   updateCellAPI(metric.label, qIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
-                                if (!stressTestingActive && isManager && e.key === "Enter") e.currentTarget.blur();
+                                if (!stressTestingActive && isManager && e.key === "Enter")
+                                  e.currentTarget.blur();
                               }}
                             />
                           ) : (
