@@ -41,6 +41,14 @@ export default function Dashboard() {
   const [editingClosedRound, setEditingClosedRound] = useState<boolean>(false);
   const [closedRoundInput, setClosedRoundInput] = useState<number>(0);
 
+  // --- Revenue Projections ---
+  const [revenueProjectionData, setRevenueProjectionData] = useState<number[]>([]);
+  const [revenueProjectionLabels, setRevenueProjectionLabels] = useState<string[]>([]);
+
+  // --- Revenue Breakdown ---
+  const [revenueBreakdownData, setRevenueBreakdownData] = useState<number[]>([]);
+  const [revenueBreakdownLabels, setRevenueBreakdownLabels] = useState<string[]>([]);
+
   // --- Fetch Growth Funnel ---
   const fetchGrowthData = async (year: number) => {
     try {
@@ -75,6 +83,47 @@ export default function Dashboard() {
       }
     } catch (err) {
       console.error("Error fetching dp-evaluation data:", err);
+    }
+  };
+
+  // --- Fetch Revenue Projections ---
+  const fetchRevenueProjections = async (year: number) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/${year}`);
+      const apiData = await res.json();
+      const totalRevenueRow = apiData["Total Revenue"];
+      if (!totalRevenueRow) return;
+      const sortedQuarters = Object.keys(totalRevenueRow).sort();
+      const values = sortedQuarters.map((q) => totalRevenueRow[q]?.value ?? 0);
+      setRevenueProjectionLabels(sortedQuarters);
+      setRevenueProjectionData(values);
+    } catch (err) {
+      console.error("Error fetching revenue projections:", err);
+    }
+  };
+
+  // --- Fetch Revenue Breakdown ---
+  const fetchRevenueBreakdown = async (year: number) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/${year}`);
+      const apiData = await res.json();
+      const revenueKeys = [
+        "Total Brokerage Revenue",
+        "Total PMS Revenue",
+        "Revenue from Subscriptions",
+        "Revenue from Broking Interest",
+        "Revenue from FPI",
+        "Revenue from AUMs",
+        "Net Insurance Income",
+      ];
+      const latestQuarter = "Q4"; // Use latest quarter or hardcode Q4
+      const breakdownValues = revenueKeys.map(
+        (key) => apiData[key]?.[latestQuarter]?.value ?? 0
+      );
+      setRevenueBreakdownData(breakdownValues);
+      setRevenueBreakdownLabels(revenueKeys);
+    } catch (err) {
+      console.error("Error fetching revenue breakdown:", err);
     }
   };
 
@@ -168,71 +217,37 @@ export default function Dashboard() {
 
       {/* Charts */}
       <div className="charts-grid">
-        {/* Revenue Projections */}
         <ChartCard
           title="Revenue Projections"
-          fetchData={async (year: number) => {
-            try {
-              const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/${year}`);
-              const apiData = await res.json();
-              const totalRevenueRow = apiData["Total Revenue"];
-              if (!totalRevenueRow) return { labels: [], data: [] };
-              const sortedQuarters = Object.keys(totalRevenueRow).sort();
-              const values = sortedQuarters.map((q) => totalRevenueRow[q]?.value ?? 0);
-              return { labels: sortedQuarters, data: values };
-            } catch (err) {
-              console.error(err);
-              return { labels: [], data: [] };
-            }
-          }}
-          chartType="line"
           years={years}
+          fetchData={fetchRevenueProjections}
+          chartData={revenueProjectionData}
+          chartLabels={revenueProjectionLabels}
+          chartType="line"
         />
-
-        {/* Revenue Breakdown */}
         <ChartCard
           title="Revenue Breakdown"
-          fetchData={async (year: number) => {
-            try {
-              const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/${year}`);
-              const apiData = await res.json();
-              const revenueKeys = [
-                "Total Brokerage Revenue",
-                "Total PMS Revenue",
-                "Revenue from Subscriptions",
-                "Revenue from Broking Interest",
-                "Revenue from FPI",
-                "Revenue from AUMs",
-                "Net Insurance Income",
-              ];
-              const latestQuarter = "Q4";
-              const values = revenueKeys.map((key) => apiData[key]?.[latestQuarter]?.value ?? 0);
-              return { labels: revenueKeys, data: values };
-            } catch (err) {
-              console.error(err);
-              return { labels: [], data: [] };
-            }
-          }}
-          chartType="doughnut"
           years={years}
+          fetchData={fetchRevenueBreakdown}
+          chartData={revenueBreakdownData}
+          chartLabels={revenueBreakdownLabels}
+          chartType="doughnut"
         />
-
-        {/* Customer Growth */}
         <ChartCard
           title="Customer Growth"
-          fetchData={fetchGrowthData}
-          chartType="bar"
-          chartLabels={quarters}
           years={years}
+          fetchData={fetchGrowthData}
+          chartData={growthData}
+          chartLabels={quarters}
+          chartType="bar"
         />
-
-        {/* DP Evaluation */}
         <ChartCard
           title="DP-Evaluation"
-          fetchData={fetchDPData}
-          chartType="line"
-          chartLabels={quarters}
           years={years}
+          fetchData={fetchDPData}
+          chartData={dpData}
+          chartLabels={quarters}
+          chartType="line"
         />
       </div>
     </div>
@@ -251,26 +266,18 @@ function Card({ title, value }: { title: string; value: any }) {
 
 function ChartCard({
   title,
-  fetchData,
-  chartType,
   years,
-  chartLabels: defaultLabels,
+  fetchData,
+  chartData,
+  chartLabels,
+  chartType,
 }: any) {
   const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
   const [selectedYear, setSelectedYear] = useState<number>(1);
-  const [chartData, setChartData] = useState<number[]>([]);
-  const [chartLabels, setChartLabels] = useState<string[]>(defaultLabels || []);
 
   useEffect(() => {
-    const loadData = async () => {
-      const res = await fetchData(selectedYear);
-      if (res) {
-        setChartData(res.data);
-        setChartLabels(res.labels);
-      }
-    };
-    loadData();
-  }, [selectedYear, fetchData]);
+    fetchData(selectedYear);
+  }, [selectedYear]);
 
   const renderChart = () => {
     const data = {
@@ -303,20 +310,14 @@ function ChartCard({
             ],
     };
 
-    if (chartType === "line")
-      return <Line data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
-    if (chartType === "bar")
-      return <Bar data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
-    if (chartType === "doughnut")
-      return <Doughnut data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
+    if (chartType === "line") return <Line data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
+    if (chartType === "bar") return <Bar data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
+    if (chartType === "doughnut") return <Doughnut data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
   };
 
   return (
     <div className="chart-card">
-      <div
-        className="chart-header"
-        style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-      >
+      <div className="chart-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div className="chart-title">{title}</div>
         <div className="chart-controls" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div className="pill-toggle">
@@ -333,8 +334,7 @@ function ChartCard({
               Year Wise
             </button>
           </div>
-
-          {viewMode === "quarter" && years && (
+          {viewMode === "quarter" && (
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
@@ -349,7 +349,6 @@ function ChartCard({
           )}
         </div>
       </div>
-
       <div className="chart-body">{renderChart()}</div>
     </div>
   );
