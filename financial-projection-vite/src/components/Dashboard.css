@@ -69,6 +69,7 @@
   padding: 4px 8px;
   background: white;
   cursor: pointer;
+  font-size: 0.85rem;
 }
 
 /* Pill toggle buttons */

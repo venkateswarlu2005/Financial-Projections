@@ -33,9 +33,6 @@ const years = [1, 2, 3, 4, 5];
 export default function Dashboard() {
   const { isManager } = useContext(RoleContext);
 
-  const [selectedYear, setSelectedYear] = useState<number>(1);
-  const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
-
   const [growthData, setGrowthData] = useState<number[]>([]);
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [dpData, setDpData] = useState<number[]>([]);
@@ -49,43 +46,37 @@ export default function Dashboard() {
   const [closedRoundInput, setClosedRoundInput] = useState<number>(0);
 
   // --- Fetch Growth Funnel ---
-  useEffect(() => {
-    const fetchGrowthData = async () => {
-      try {
-        const res = await fetch(`http://localhost:8000/api/sheet-data/growth-funnel/${selectedYear}`);
-        const apiData = await res.json();
-        const totalNetUsersRow = apiData["Total Net Users"];
-        if (totalNetUsersRow) {
-          const quarters = Object.keys(totalNetUsersRow).sort((a, b) => parseInt(a.slice(2)) - parseInt(b.slice(2)));
-          const values = quarters.map((q) => totalNetUsersRow[q]?.value ?? 0);
-          setGrowthData(values);
-          setTotalUsers(values[values.length - 1] || 0);
-        }
-      } catch (err) {
-        console.error("Error fetching growth funnel data:", err);
+  const fetchGrowthData = async (year: number) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/sheet-data/growth-funnel/${year}`);
+      const apiData = await res.json();
+      const totalNetUsersRow = apiData["Total Net Users"];
+      if (totalNetUsersRow) {
+        const sortedQuarters = Object.keys(totalNetUsersRow).sort((a, b) => parseInt(a.slice(2)) - parseInt(b.slice(2)));
+        const values = sortedQuarters.map((q) => totalNetUsersRow[q]?.value ?? 0);
+        setGrowthData(values);
+        setTotalUsers(values[values.length - 1] || 0);
       }
-    };
-    fetchGrowthData();
-  }, [selectedYear]);
+    } catch (err) {
+      console.error("Error fetching growth funnel data:", err);
+    }
+  };
 
   // --- Fetch DP Evaluation ---
-  useEffect(() => {
-    const fetchDPData = async () => {
-      try {
-        const res = await fetch(`http://localhost:8000/api/sheet-data/dp-evaluation/${selectedYear}`);
-        const apiData = await res.json();
-        const dpValuationRow = apiData["DP Valuation"];
-        if (dpValuationRow) {
-          const quarters = Object.keys(dpValuationRow).sort((a, b) => parseInt(a.slice(2)) - parseInt(b.slice(2)));
-          const values = quarters.map((q) => dpValuationRow[q]?.value ?? 0);
-          setDpData(values);
-        }
-      } catch (err) {
-        console.error("Error fetching dp-evaluation data:", err);
+  const fetchDPData = async (year: number) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/sheet-data/dp-evaluation/${year}`);
+      const apiData = await res.json();
+      const dpValuationRow = apiData["DP Valuation"];
+      if (dpValuationRow) {
+        const sortedQuarters = Object.keys(dpValuationRow).sort((a, b) => parseInt(a.slice(2)) - parseInt(b.slice(2)));
+        const values = sortedQuarters.map((q) => dpValuationRow[q]?.value ?? 0);
+        setDpData(values);
       }
-    };
-    fetchDPData();
-  }, [selectedYear]);
+    } catch (err) {
+      console.error("Error fetching dp-evaluation data:", err);
+    }
+  };
 
   // --- Fetch Revenue ---
   const fetchRevenueForYear = async (year: number) => {
@@ -94,9 +85,9 @@ export default function Dashboard() {
       const apiData = await res.json();
       const totalRevenueRow = apiData["Total Revenue"];
       if (!totalRevenueRow) return;
-      const quarters = Object.keys(totalRevenueRow).sort();
-      const values = quarters.map((q) => totalRevenueRow[q]?.value ?? 0);
-      setRevenueLabels(quarters);
+      const sortedQuarters = Object.keys(totalRevenueRow).sort();
+      const values = sortedQuarters.map((q) => totalRevenueRow[q]?.value ?? 0);
+      setRevenueLabels(sortedQuarters);
       setRevenueData(values);
 
       const revenueKeys = [
@@ -108,7 +99,7 @@ export default function Dashboard() {
         "Revenue from AUMs",
         "Net Insurance Income",
       ];
-      const latestQuarter = quarters[quarters.length - 1];
+      const latestQuarter = sortedQuarters[sortedQuarters.length - 1];
       const breakdownValues = revenueKeys.map((key) => apiData[key]?.[latestQuarter]?.value ?? 0);
       setRevenueBreakdownData(breakdownValues);
       setRevenueBreakdownLabels(revenueKeys);
@@ -117,26 +108,19 @@ export default function Dashboard() {
     }
   };
 
-  useEffect(() => {
-    fetchRevenueForYear(selectedYear);
-  }, [selectedYear]);
-
   // --- Fetch LTV / CAC Ratio ---
-  useEffect(() => {
-    const fetchLtvCac = async () => {
-      try {
-        const res = await fetch(`http://localhost:8000/api/sheet-data/unit-economics/${selectedYear}`);
-        const apiData = await res.json();
-        const ltvRow = apiData["LTV/CAC Ratio"];
-        if (ltvRow) setLtvCacRatio(ltvRow[`Y${selectedYear}Q1`]?.value ?? null);
-      } catch (err) {
-        console.error("Error fetching LTV/CAC ratio:", err);
-      }
-    };
-    fetchLtvCac();
-  }, [selectedYear]);
+  const fetchLtvCac = async (year: number) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/sheet-data/unit-economics/${year}`);
+      const apiData = await res.json();
+      const ltvRow = apiData["LTV/CAC Ratio"];
+      if (ltvRow) setLtvCacRatio(ltvRow[`Y${year}Q1`]?.value ?? null);
+    } catch (err) {
+      console.error("Error fetching LTV/CAC ratio:", err);
+    }
+  };
 
-  // --- Closed Round ---
+  // --- Fetch Closed Round ---
   useEffect(() => {
     const fetchClosedRound = async () => {
       try {
@@ -167,37 +151,8 @@ export default function Dashboard() {
     }
   };
 
-  // --- Chart Data ---
-  const revenuePieChartData = {
-    labels: revenueBreakdownLabels,
-    datasets: [
-      {
-        data: revenueBreakdownData,
-        backgroundColor: ["#f97316", "#2563eb", "#22c55e", "#facc15", "#8b5cf6", "#ec4899", "#14b8a6"],
-      },
-    ],
-  };
-
-  const growthChartData = {
-    labels: growthData.map((_, i) => `Q${i + 1}`),
-    datasets: [{ label: "Total Customers", data: growthData, backgroundColor: "#f97316" }],
-  };
-
-  const dpChartData = {
-    labels: dpData.map((_, i) => `Q${i + 1}`),
-    datasets: [
-      { label: "DP Valuation", data: dpData, borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,0.3)", fill: true },
-    ],
-  };
-
-  const revenueChartData = {
-    labels: revenueLabels,
-    datasets: [
-      { label: "Total Revenue", data: revenueData, borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,0.3)", fill: true, tension: 0.3 },
-    ],
-  };
-
-  const formatNumber = (num: number) => num?.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+  const formatNumber = (num: number) =>
+    num?.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
   return (
     <div className="dashboard">
@@ -205,7 +160,10 @@ export default function Dashboard() {
       <div className="summary-cards">
         <Card title="Book Value per Share" value="NAN" />
         <Card title="Total Users" value={formatNumber(totalUsers)} />
-        <Card title="LTV / CAC Ratio (Q1)" value={ltvCacRatio !== null ? ltvCacRatio.toFixed(2) : "N/A"} />
+        <Card
+          title="LTV / CAC Ratio (Q1)"
+          value={ltvCacRatio !== null ? ltvCacRatio.toFixed(2) : "N/A"}
+        />
         <Card title="Monthly Churn Rate" value="3,75,000" />
         <Card
           title="Closed Round"
@@ -224,7 +182,10 @@ export default function Dashboard() {
                   onChange={(e) => setClosedRoundInput(Number(e.target.value))}
                 />
               ) : (
-                <span onClick={() => setEditingClosedRound(true)} style={{ cursor: "pointer" }}>
+                <span
+                  onClick={() => setEditingClosedRound(true)}
+                  style={{ cursor: "pointer" }}
+                >
                   {formatNumber(closedRound)}
                 </span>
               )
@@ -240,50 +201,35 @@ export default function Dashboard() {
         <ChartCard
           title="Revenue Projections"
           years={years}
-          quarters={quarters}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        >
-          <Line data={revenueChartData} options={{ responsive: true, maintainAspectRatio: false }} />
-        </ChartCard>
-
+          fetchData={fetchRevenueForYear}
+          chartData={revenueData}
+          chartLabels={revenueLabels}
+          chartType="line"
+        />
         <ChartCard
           title="Revenue Breakdown"
           years={years}
-          quarters={quarters}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        >
-          <Doughnut data={revenuePieChartData} options={{ responsive: true, maintainAspectRatio: false }} />
-        </ChartCard>
-
+          fetchData={fetchRevenueForYear}
+          chartData={revenueBreakdownData}
+          chartLabels={revenueBreakdownLabels}
+          chartType="doughnut"
+        />
         <ChartCard
           title="Customer Growth"
           years={years}
-          quarters={quarters}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        >
-          <Bar data={growthChartData} options={{ responsive: true, maintainAspectRatio: false }} />
-        </ChartCard>
-
+          fetchData={fetchGrowthData}
+          chartData={growthData}
+          chartLabels={quarters}
+          chartType="bar"
+        />
         <ChartCard
           title="DP-Evaluation"
           years={years}
-          quarters={quarters}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        >
-          <Line data={dpChartData} options={{ responsive: true, maintainAspectRatio: false }} />
-        </ChartCard>
+          fetchData={fetchDPData}
+          chartData={dpData}
+          chartLabels={quarters}
+          chartType="line"
+        />
       </div>
     </div>
   );
@@ -301,32 +247,89 @@ function Card({ title, value }: { title: string; value: any }) {
 
 function ChartCard({
   title,
-  children,
-  selectedYear,
   years,
-  viewMode,
-  onYearChange,
-  onViewModeChange,
+  fetchData,
+  chartData,
+  chartLabels,
+  chartType,
 }: any) {
+  // Local state per chart
+  const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
+  const [selectedYear, setSelectedYear] = useState<number>(1);
+
+  // Fetch data whenever year changes
+  useEffect(() => {
+    fetchData(selectedYear);
+  }, [selectedYear]);
+
+  // Determine chart component
+  const renderChart = () => {
+    const data = {
+      labels: chartLabels,
+      datasets:
+        chartType === "doughnut"
+          ? [
+              {
+                data: chartData,
+                backgroundColor: [
+                  "#f97316",
+                  "#2563eb",
+                  "#22c55e",
+                  "#facc15",
+                  "#8b5cf6",
+                  "#ec4899",
+                  "#14b8a6",
+                ],
+              },
+            ]
+          : [
+              {
+                label: title,
+                data: chartData,
+                borderColor: "#22c55e",
+                backgroundColor: "rgba(34,197,94,0.3)",
+                fill: true,
+                tension: 0.3,
+              },
+            ],
+    };
+
+    if (chartType === "line") return <Line data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
+    if (chartType === "bar") return <Bar data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
+    if (chartType === "doughnut") return <Doughnut data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
+  };
+
   return (
     <div className="chart-card">
-      <div className="chart-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div
+        className="chart-header"
+        style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+      >
         <div className="chart-title">{title}</div>
-
         <div className="chart-controls" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           {/* Quarter/Year toggle */}
           <div className="pill-toggle">
-            <button className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`} onClick={() => onViewModeChange("quarter")}>
+            <button
+              className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
+              onClick={() => setViewMode("quarter")}
+            >
               Quarter Wise
             </button>
-            <button className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`} onClick={() => onViewModeChange("year")}>
+            <button
+              className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
+              onClick={() => setViewMode("year")}
+            >
               Year Wise
             </button>
           </div>
 
           {/* Year Dropdown */}
           {viewMode === "quarter" && (
-            <select value={selectedYear} onChange={(e) => onYearChange(Number(e.target.value))} className="year-dropdown">
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="year-dropdown"
+            >
               {years.map((y: number) => (
                 <option key={y} value={y}>
                   Year {y}
@@ -337,7 +340,7 @@ function ChartCard({
         </div>
       </div>
 
-      <div className="chart-body">{children}</div>
+      <div className="chart-body">{renderChart()}</div>
     </div>
   );
 }
