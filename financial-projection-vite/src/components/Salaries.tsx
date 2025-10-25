@@ -136,32 +136,69 @@ const Salaries: React.FC<SalariesProps> = ({ stressTestData }) => {
 
   // Fetch sheet data
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (stressTestingActive && stressTestData) {
-          setSheetData(stressTestData[sheetType]);
-          return;
-        }
+  const fetchData = async () => {
+    try {
+      if (stressTestingActive && stressTestData) {
+        const stressData = stressTestData[sheetType];
+
         if (viewMode === "year") {
-          const allData: any = {};
-          for (let year = 1; year <= 5; year++) {
-            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
-            const data = await res.json();
-            allData[`Year ${year}`] = data;
-          }
-          setSheetData(allData);
+          const yearlyData: any = {};
+          yearsList.forEach((year, yIdx) => {
+            yearlyData[year] = {};
+
+            metricItems.forEach((metric) => {
+              const metricData = stressData[metric.name] || {};
+              const yearKey = `Y${yIdx + 1}Q`;
+
+              if (metric.yearlySum) {
+                // Sum all quarters for calculated metrics
+                const sum = Object.keys(metricData)
+                  .filter(k => k.startsWith(yearKey))
+                  .reduce((acc, k) => acc + (metricData[k]?.value ?? 0), 0);
+
+                yearlyData[year][metric.name] = {
+                  [`Y${yIdx + 1}Q4`]: { value: sum, is_calculated: true },
+                };
+              } else {
+                // Q4 snapshot for counts/averages
+                yearlyData[year][metric.name] = {
+                  [`Y${yIdx + 1}Q4`]: { value: metricData[`${yearKey}4`]?.value ?? 0, is_calculated: true },
+                };
+              }
+            });
+          });
+
+          setSheetData(yearlyData);
         } else {
-          const yearNum = selectedYear.replace("Year ", "");
-          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-          const data = await res.json();
-          setSheetData(data);
+          // Quarter view stress testing
+          setSheetData(stressData);
         }
-      } catch (err) {
-        console.error("Error fetching salaries data:", err);
+        return;
       }
-    };
-    fetchData();
-  }, [viewMode, selectedYear, stressTestingActive, stressTestData]);
+
+      // Normal API fetch
+      if (viewMode === "year") {
+        const allData: any = {};
+        for (let year = 1; year <= 5; year++) {
+          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+          const data = await res.json();
+          allData[`Year ${year}`] = data;
+        }
+        setSheetData(allData);
+      } else {
+        const yearNum = selectedYear.replace("Year ", "");
+        const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const data = await res.json();
+        setSheetData(data);
+      }
+    } catch (err) {
+      console.error("Error fetching salaries data:", err);
+    }
+  };
+
+  fetchData();
+}, [viewMode, selectedYear, stressTestingActive, stressTestData]);
+
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
