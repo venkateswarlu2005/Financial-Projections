@@ -31,6 +31,17 @@ const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const years = [1, 2, 3, 4, 5];
 const yearWiseLabels = years.map((y) => `Year ${y}`); // Labels for year-wise charts
 
+// Moved revenueKeys to be a global constant
+const revenueKeys = [
+  "Total Brokerage Revenue",
+  "Total PMS Revenue",
+  "Revenue from Subscriptions",
+  "Revenue from Broking Interest",
+  "Revenue from FPI",
+  "Revenue from AUMs",
+  "Net Insurance Income",
+];
+
 export default function Dashboard() {
   const { isManager } = useContext(RoleContext);
 
@@ -45,11 +56,16 @@ export default function Dashboard() {
   const [revenueBreakdownLabels, setRevenueBreakdownLabels] = useState<string[]>(
     []
   );
-  
+
   // --- State for Year-Wise Data ---
   const [growthDataYearly, setGrowthDataYearly] = useState<number[]>([]);
   const [dpDataYearly, setDpDataYearly] = useState<number[]>([]);
   const [revenueDataYearly, setRevenueDataYearly] = useState<number[]>([]);
+  // --- New State for Yearly Doughnut ---
+  const [revenueBreakdownDataYearly, setRevenueBreakdownDataYearly] =
+    useState<number[]>([]);
+  const [revenueBreakdownLabelsYearly, setRevenueBreakdownLabelsYearly] =
+    useState<string[]>([]);
 
   // --- State for Closed Round ---
   const [closedRound, setClosedRound] = useState<number>(0);
@@ -211,16 +227,7 @@ export default function Dashboard() {
       const latestQuarter = sortedQuarters[sortedQuarters.length - 1];
       if (!latestQuarter) return;
 
-      const revenueKeys = [
-        "Total Brokerage Revenue",
-        "Total PMS Revenue",
-        "Revenue from Subscriptions",
-        "Revenue from Broking Interest",
-        "Revenue from FPI",
-        "Revenue from AUMs",
-        "Net Insurance Income",
-      ];
-
+      // revenueKeys constant is now at top level
       const breakdownValues = revenueKeys.map(
         (key) => apiData[key]?.[latestQuarter]?.value ?? 0
       );
@@ -229,12 +236,51 @@ export default function Dashboard() {
     } catch (err) {
       console.error("Error fetching revenue breakdown data:", err);
     }
-  }, []);
+  }, []); // Removed revenueKeys from dependency array as it's a constant
+
+  // --- Fetch Revenue Breakdown (Yearly Cumulative) ---
+  const fetchRevenueBreakdownYearly = useCallback(async () => {
+    try {
+      // This will hold the data for the last quarter of each year
+      const allYearsData = await Promise.all(
+        years.map(async (year) => {
+          const res = await fetch(
+            `http://localhost:8000/api/sheet-data/revenue/${year}`
+          );
+          const apiData = await res.json();
+
+          const totalRevenueRow = apiData["Total Revenue"];
+          if (!totalRevenueRow)
+            return new Array(revenueKeys.length).fill(0);
+
+          const sortedQuarters = Object.keys(totalRevenueRow).sort();
+          const latestQuarter = sortedQuarters[sortedQuarters.length - 1];
+          if (!latestQuarter)
+            return new Array(revenueKeys.length).fill(0);
+
+          // Get values for the latest quarter of this year
+          return revenueKeys.map(
+            (key) => apiData[key]?.[latestQuarter]?.value ?? 0
+          );
+        })
+      );
+
+      // Now, sum the values across all years for a cumulative total
+      const totals = new Array(revenueKeys.length).fill(0);
+      allYearsData.forEach((yearData) => {
+        yearData.forEach((value, index) => {
+          totals[index] += value;
+        });
+      });
+
+      setRevenueBreakdownDataYearly(totals);
+      setRevenueBreakdownLabelsYearly(revenueKeys); // Labels are the same
+    } catch (err) {
+      console.error("Error fetching yearly revenue breakdown data:", err);
+    }
+  }, []); // `years` and `revenueKeys` are constants
 
   // --- Fetch LTV / CAC Ratio ---
-  // This seems to be a single-value card, so no quarterly/yearly fetch needed here
-  // But we need to fetch it when the dashboard loads.
-  // We'll also fetch the *first year's* data for all charts on initial load.
   useEffect(() => {
     const fetchLtvCac = async (year: number) => {
       try {
@@ -243,18 +289,13 @@ export default function Dashboard() {
         );
         const apiData = await res.json();
         const ltvRow = apiData["LTV/CAC Ratio"];
-        // NOTE: This logic seems to only get Q1 of the specified year.
-        // You might want to adjust this logic if it needs to be dynamic.
         if (ltvRow) setLtvCacRatio(ltvRow[`Y${year}Q1`]?.value ?? null);
       } catch (err) {
         console.error("Error fetching LTV/CAC ratio:", err);
       }
     };
 
-    // Fetch initial data for Year 1
     fetchLtvCac(1);
-    // Note: The ChartCard components will trigger their own initial fetches for Year 1
-    // because of their internal useEffect hooks.
   }, []);
 
   // --- Fetch/Save Closed Round ---
@@ -356,7 +397,10 @@ export default function Dashboard() {
           chartData={revenueBreakdownData}
           chartLabels={revenueBreakdownLabels}
           chartType="doughnut"
-          // No year-wise props, toggle will be hidden
+          // --- Pass new props ---
+          fetchYearWiseData={fetchRevenueBreakdownYearly}
+          yearWiseData={revenueBreakdownDataYearly}
+          yearWiseLabels={revenueBreakdownLabelsYearly}
         />
         <ChartCard
           title="Customer Growth"
@@ -428,15 +472,22 @@ function ChartCard({
   // Determine chart component
   const renderChart = () => {
     // Check if we should use yearly data
-    const isYearly = viewMode === "year" && chartType !== "doughnut";
+    // --- UPDATED: Removed doughnut exception ---
+    const isYearly = viewMode === "year";
 
     const data = {
-      labels: isYearly ? yearWiseLabels : chartLabels, // <-- DYNAMIC LABELS
+      // --- UPDATED: Added fallback for yearly labels ---
+      labels: isYearly
+        ? yearWiseLabels.length > 0
+          ? yearWiseLabels
+          : chartLabels
+        : chartLabels,
       datasets:
         chartType === "doughnut"
           ? [
               {
-                data: chartData, // Doughnut always uses the "quarterly" data (which is a snapshot)
+                // --- UPDATED: Data is now dynamic ---
+                data: isYearly ? yearWiseData : chartData,
                 backgroundColor: [
                   "#f97316",
                   "#2563eb",
@@ -465,7 +516,6 @@ function ChartCard({
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          // Show legend for doughnut, hide for others (optional, but cleaner)
           display: chartType === "doughnut",
         },
       },
@@ -492,8 +542,9 @@ function ChartCard({
           className="chart-controls"
           style={{ display: "flex", alignItems: "center", gap: "10px" }}
         >
-          {/* Quarter/Year toggle - HIDE FOR DOUGHNUT */}
-          
+          {/* Quarter/Year toggle */}
+          {/* --- UPDATED: Show toggle only if yearly data func is provided --- */}
+          {fetchYearWiseData && (
             <div className="pill-toggle">
               <button
                 className={`pill-toggle-btn ${
@@ -512,7 +563,7 @@ function ChartCard({
                 Year Wise
               </button>
             </div>
-          
+          )}
 
           {/* Year Dropdown - HIDE FOR YEAR WISE MODE */}
           {viewMode === "quarter" && (
