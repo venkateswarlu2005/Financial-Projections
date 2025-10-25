@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import "./GTM.css";
-import { RoleContext } from "../App"; // ✅ Import RoleContext
+import { RoleContext } from "../App"; // ✅ Role-based access
 
 // --- Types ---
 interface QuarterData {
@@ -27,7 +27,8 @@ interface AcquisitionCardProps {
     count: number,
     amount_per_acquisition: number
   ) => void;
-  isManager: boolean; // ✅ manager-only prop
+  isManager: boolean;
+  selectedYear: number; // ✅ add to handle multi-year
 }
 
 // --- Card Component ---
@@ -38,9 +39,12 @@ const AcquisitionCard: React.FC<AcquisitionCardProps> = ({
   borderClass,
   headerClass,
   onUpdate,
-  isManager, // ✅ manager-only
+  isManager,
+  selectedYear,
 }) => {
-  const quarters = ["Y1Q1", "Y1Q2", "Y1Q3", "Y1Q4"];
+  const quarters = ["Y1Q1", "Y1Q2", "Y1Q3", "Y1Q4"].map(
+    (q) => `Y${selectedYear}Q${q.slice(-1)}`
+  );
 
   return (
     <div className={`acq-card ${borderClass}`}>
@@ -56,25 +60,46 @@ const AcquisitionCard: React.FC<AcquisitionCardProps> = ({
               <input
                 type="number"
                 value={countVal}
-                readOnly={!isManager} // ✅ editable only for managers
-                style={!isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                readOnly={!isManager}
+                style={
+                  !isManager
+                    ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+                    : {}
+                }
                 onChange={(e) => {
                   if (!isManager) return;
                   const newCount = Number(e.target.value);
-                  onUpdate(acquisitionKey, 1, index + 1, newCount, amountVal);
+                  onUpdate(
+                    acquisitionKey,
+                    selectedYear,
+                    index + 1,
+                    newCount,
+                    amountVal
+                  );
                 }}
               />
+
               <label>Amount (₹):</label>
               <input
                 type="number"
                 className="amount-input"
                 value={amountVal}
-                readOnly={!isManager} // ✅ editable only for managers
-                style={!isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                readOnly={!isManager}
+                style={
+                  !isManager
+                    ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+                    : {}
+                }
                 onChange={(e) => {
                   if (!isManager) return;
                   const newAmount = Number(e.target.value);
-                  onUpdate(acquisitionKey, 1, index + 1, countVal, newAmount);
+                  onUpdate(
+                    acquisitionKey,
+                    selectedYear,
+                    index + 1,
+                    countVal,
+                    newAmount
+                  );
                 }}
               />
             </div>
@@ -87,13 +112,16 @@ const AcquisitionCard: React.FC<AcquisitionCardProps> = ({
 
 // --- Main Component ---
 const GTM: React.FC = () => {
-  const { isManager } = useContext(RoleContext); // ✅ role check
+  const { isManager } = useContext(RoleContext);
   const [selectedYear, setSelectedYear] = useState("Year 1");
   const [apiData, setApiData] = useState<ApiData>({});
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch data function
+  // ✅ Extract numeric year
+  const yearNum = parseInt(selectedYear.replace("Year ", ""), 10);
+
+  // --- Fetch Data ---
   const fetchGtmData = (year: number) => {
     fetch(`http://localhost:8000/api/gtm-data/${year}`)
       .then((res) => res.json())
@@ -103,13 +131,11 @@ const GTM: React.FC = () => {
       .catch((err) => console.error("Failed to fetch GTM data:", err));
   };
 
-  // Initial + on year change
   useEffect(() => {
-    const yearNum = parseInt(selectedYear.replace("Year ", ""), 10);
     fetchGtmData(yearNum);
   }, [selectedYear]);
 
-  // Update API call + refetch
+  // --- Update Handler ---
   const handleUpdate = (
     acquisitionType: string,
     year_num: number,
@@ -117,12 +143,13 @@ const GTM: React.FC = () => {
     newCount: number,
     newAmount: number
   ) => {
-    if (!isManager) return; // ✅ only managers can update
+    if (!isManager) return;
 
+    // ✅ Update local state without overwriting other years
     setApiData((prev) => {
       const updated = { ...prev };
       const quarterKey = `Y${year_num}Q${quarter_num}`;
-      if (!updated[acquisitionType]) return prev;
+      if (!updated[acquisitionType]) updated[acquisitionType] = {};
       updated[acquisitionType][quarterKey] = {
         count: newCount,
         amount_per_acquisition: newAmount,
@@ -130,6 +157,7 @@ const GTM: React.FC = () => {
       return updated;
     });
 
+    // ✅ Send update to backend
     fetch("http://localhost:8000/api/update-gtm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -143,11 +171,12 @@ const GTM: React.FC = () => {
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to update GTM data");
-        fetchGtmData(year_num);
+        fetchGtmData(year_num); // ✅ only refetch the same year's data
       })
       .catch((err) => console.error("Failed to update GTM data:", err));
   };
 
+  // --- UI ---
   return (
     <div className="page-background">
       <div className="main-container">
@@ -195,7 +224,7 @@ const GTM: React.FC = () => {
           </div>
         </div>
 
-        {/* Acquisition Cards in a row */}
+        {/* Acquisition Cards */}
         <div className="acq-row">
           <div className="acq-card-wrapper">
             <AcquisitionCard
@@ -205,7 +234,8 @@ const GTM: React.FC = () => {
               headerClass="bg-revenue"
               data={apiData["Full Broking House"] || {}}
               onUpdate={handleUpdate}
-              isManager={isManager} // ✅ pass role
+              isManager={isManager}
+              selectedYear={yearNum}
             />
           </div>
 
@@ -217,7 +247,8 @@ const GTM: React.FC = () => {
               headerClass="bg-customer"
               data={apiData["GOP Based Broker Deals"] || {}}
               onUpdate={handleUpdate}
-              isManager={isManager} // ✅ pass role
+              isManager={isManager}
+              selectedYear={yearNum}
             />
           </div>
 
@@ -229,7 +260,8 @@ const GTM: React.FC = () => {
               headerClass="bg-ratio"
               data={apiData["Secondary Market Acquisitions"] || {}}
               onUpdate={handleUpdate}
-              isManager={isManager} // ✅ pass role
+              isManager={isManager}
+              selectedYear={yearNum}
             />
           </div>
         </div>
