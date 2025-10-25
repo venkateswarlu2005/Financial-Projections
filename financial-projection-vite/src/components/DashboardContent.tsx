@@ -41,13 +41,15 @@ export default function Dashboard() {
   const [editingClosedRound, setEditingClosedRound] = useState<boolean>(false);
   const [closedRoundInput, setClosedRoundInput] = useState<number>(0);
 
-  // --- Revenue Projections ---
+  // Separate states for Revenue Projections chart
   const [revenueProjectionData, setRevenueProjectionData] = useState<number[]>([]);
   const [revenueProjectionLabels, setRevenueProjectionLabels] = useState<string[]>([]);
+  const [revenueProjectionYear, setRevenueProjectionYear] = useState<number>(1);
 
-  // --- Revenue Breakdown ---
+  // Separate states for Revenue Breakdown chart
   const [revenueBreakdownData, setRevenueBreakdownData] = useState<number[]>([]);
   const [revenueBreakdownLabels, setRevenueBreakdownLabels] = useState<string[]>([]);
+  const [revenueBreakdownYear, setRevenueBreakdownYear] = useState<number>(1);
 
   // --- Fetch Growth Funnel ---
   const fetchGrowthData = async (year: number) => {
@@ -87,7 +89,7 @@ export default function Dashboard() {
   };
 
   // --- Fetch Revenue Projections ---
-  const fetchRevenueProjections = async (year: number) => {
+  const fetchRevenueProjectionData = async (year: number) => {
     try {
       const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/${year}`);
       const apiData = await res.json();
@@ -98,15 +100,16 @@ export default function Dashboard() {
       setRevenueProjectionLabels(sortedQuarters);
       setRevenueProjectionData(values);
     } catch (err) {
-      console.error("Error fetching revenue projections:", err);
+      console.error("Error fetching revenue projection data:", err);
     }
   };
 
   // --- Fetch Revenue Breakdown ---
-  const fetchRevenueBreakdown = async (year: number) => {
+  const fetchRevenueBreakdownData = async (year: number) => {
     try {
       const res = await fetch(`http://localhost:8000/api/sheet-data/revenue/${year}`);
       const apiData = await res.json();
+
       const revenueKeys = [
         "Total Brokerage Revenue",
         "Total PMS Revenue",
@@ -116,14 +119,18 @@ export default function Dashboard() {
         "Revenue from AUMs",
         "Net Insurance Income",
       ];
-      const latestQuarter = "Q4"; // Use latest quarter or hardcode Q4
-      const breakdownValues = revenueKeys.map(
-        (key) => apiData[key]?.[latestQuarter]?.value ?? 0
-      );
+
+      // Use the latest quarter available in the data for the breakdown
+      const totalRevenueRow = apiData["Total Revenue"];
+      if (!totalRevenueRow) return;
+      const sortedQuarters = Object.keys(totalRevenueRow).sort();
+      const latestQuarter = sortedQuarters[sortedQuarters.length - 1];
+
+      const breakdownValues = revenueKeys.map((key) => apiData[key]?.[latestQuarter]?.value ?? 0);
       setRevenueBreakdownData(breakdownValues);
       setRevenueBreakdownLabels(revenueKeys);
     } catch (err) {
-      console.error("Error fetching revenue breakdown:", err);
+      console.error("Error fetching revenue breakdown data:", err);
     }
   };
 
@@ -153,6 +160,25 @@ export default function Dashboard() {
     };
     fetchClosedRound();
   }, []);
+
+  // Fetch initial data on mount
+  useEffect(() => {
+    fetchGrowthData(1);
+    fetchDPData(1);
+    fetchLtvCac(1);
+
+    fetchRevenueProjectionData(revenueProjectionYear);
+    fetchRevenueBreakdownData(revenueBreakdownYear);
+  }, []);
+
+  // Refetch when years change
+  useEffect(() => {
+    fetchRevenueProjectionData(revenueProjectionYear);
+  }, [revenueProjectionYear]);
+
+  useEffect(() => {
+    fetchRevenueBreakdownData(revenueBreakdownYear);
+  }, [revenueBreakdownYear]);
 
   const saveClosedRound = async () => {
     setClosedRound(closedRoundInput);
@@ -220,18 +246,22 @@ export default function Dashboard() {
         <ChartCard
           title="Revenue Projections"
           years={years}
-          fetchData={fetchRevenueProjections}
+          fetchData={() => {}} // no fetching needed here, handled externally
           chartData={revenueProjectionData}
           chartLabels={revenueProjectionLabels}
           chartType="line"
+          selectedYear={revenueProjectionYear}
+          onYearChange={setRevenueProjectionYear}
         />
         <ChartCard
           title="Revenue Breakdown"
           years={years}
-          fetchData={fetchRevenueBreakdown}
+          fetchData={() => {}} // no fetching needed here, handled externally
           chartData={revenueBreakdownData}
           chartLabels={revenueBreakdownLabels}
           chartType="doughnut"
+          selectedYear={revenueBreakdownYear}
+          onYearChange={setRevenueBreakdownYear}
         />
         <ChartCard
           title="Customer Growth"
@@ -271,14 +301,14 @@ function ChartCard({
   chartData,
   chartLabels,
   chartType,
+  selectedYear,
+  onYearChange,
 }: any) {
-  const [viewMode, setViewMode] = useState<"quarter" | "year">("quarter");
-  const [selectedYear, setSelectedYear] = useState<number>(1);
+  // We use controlled selectedYear state from parent now, not local
 
-  useEffect(() => {
-    fetchData(selectedYear);
-  }, [selectedYear]);
+  // When year changes, call onYearChange is triggered from dropdown
 
+  // Determine chart component
   const renderChart = () => {
     const data = {
       labels: chartLabels,
@@ -310,45 +340,51 @@ function ChartCard({
             ],
     };
 
-    if (chartType === "line") return <Line data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
-    if (chartType === "bar") return <Bar data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
-    if (chartType === "doughnut") return <Doughnut data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
+    if (chartType === "line")
+      return <Line data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
+    if (chartType === "bar")
+      return <Bar data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
+    if (chartType === "doughnut")
+      return <Doughnut data={data} options={{ responsive: true, maintainAspectRatio: false }} />;
   };
 
   return (
     <div className="chart-card">
-      <div className="chart-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div
+        className="chart-header"
+        style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+      >
         <div className="chart-title">{title}</div>
         <div className="chart-controls" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {/* Quarter/Year toggle */}
           <div className="pill-toggle">
             <button
-              className={`pill-toggle-btn ${viewMode === "quarter" ? "active" : ""}`}
-              onClick={() => setViewMode("quarter")}
+              className={`pill-toggle-btn ${"quarter" === "quarter" ? "active" : ""}`}
+              // Toggle button is retained but inactive for simplicity
+              disabled
             >
               Quarter Wise
             </button>
-            <button
-              className={`pill-toggle-btn ${viewMode === "year" ? "active" : ""}`}
-              onClick={() => setViewMode("year")}
-            >
+            <button className="pill-toggle-btn" disabled>
               Year Wise
             </button>
           </div>
-          {viewMode === "quarter" && (
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="year-dropdown"
-            >
-              {years.map((y: number) => (
-                <option key={y} value={y}>
-                  Year {y}
-                </option>
-              ))}
-            </select>
-          )}
+
+          {/* Year Dropdown */}
+          <select
+            value={selectedYear}
+            onChange={(e) => onYearChange(Number(e.target.value))}
+            className="year-dropdown"
+          >
+            {years.map((y: number) => (
+              <option key={y} value={y}>
+                Year {y}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
+
       <div className="chart-body">{renderChart()}</div>
     </div>
   );
