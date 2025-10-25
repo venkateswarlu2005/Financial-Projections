@@ -51,38 +51,88 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ✅ Updated fetch logic (Option 1)
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (stressTestingActive && stressTestData) {
-          setSheetData(stressTestData[sheetType]);
-          return;
-        }
+ useEffect(() => {
+  const fetchData = async () => {
+    try {
+      // ✅ Handle stress testing first
+      if (stressTestingActive && stressTestData) {
+        const stressData = stressTestData[sheetType];
 
         if (viewMode === "year") {
-          // Fetch all years at once
-          const allData: any = {};
-          for (let year = 1; year <= 5; year++) {
-            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
-            const data = await res.json();
-            allData[`Year ${year}`] = data;
-          }
-          setSheetData(allData);
-        } else {
-          // Fetch only selected year for quarter view
-          const yearNum = selectedYear.replace("Year ", "");
-          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-          const data = await res.json();
-          setSheetData(data);
-        }
-      } catch (err) {
-        console.error("Error fetching unit economics data:", err);
-      }
-    };
+          const yearlyData: any = {};
+          yearsList.forEach((year, yIdx) => {
+            const yearNum = yIdx + 1;
+            const yearly: any = {};
 
-    fetchData();
-  }, [viewMode, selectedYear, stressTestingActive, stressTestData]);
+            metricItems.forEach(metric => {
+              const metricData = stressData[metric.label] || {};
+              const quarterKeys = ["Q1", "Q2", "Q3", "Q4"].map((q, qIdx) => `Y${yearNum}Q${qIdx + 1}`);
+
+              if (metric.type === "auto") {
+                // Compute auto metrics for yearly view
+                let value = 0;
+                switch (metric.label) {
+                  case "LTV (Lifetime Value)":
+                    const arpu = stressData["ARPU (Average Revenue Per User)"]?.[`Y${yearNum}Q4`]?.value ?? 0;
+                    const avgLifetime = stressData["Average Customer Lifetime (Months)"]?.[`Y${yearNum}Q4`]?.value ?? 0;
+                    value = arpu * avgLifetime;
+                    break;
+                  case "LTV/CAC Ratio":
+                    const ltv = stressData["LTV (Lifetime Value)"]?.[`Y${yearNum}Q4`]?.value ?? 0;
+                    const cac = stressData["CAC (Customer Acquisition Cost)"]?.[`Y${yearNum}Q4`]?.value ?? 1;
+                    value = ltv / cac;
+                    break;
+                  case "Payback Period (Months)":
+                    const cacVal = stressData["CAC (Customer Acquisition Cost)"]?.[`Y${yearNum}Q4`]?.value ?? 0;
+                    const arpuVal = stressData["ARPU (Average Revenue Per User)"]?.[`Y${yearNum}Q4`]?.value ?? 1;
+                    value = cacVal / arpuVal;
+                    break;
+                  default:
+                    // Default: take Q4 value for yearly view
+                    value = metricData[`Y${yearNum}Q4`]?.value ?? 0;
+                }
+                yearly[metric.label] = { value, is_calculated: true };
+              } else {
+                // Input metrics: take Q4 value for yearly view
+                yearly[metric.label] = { value: metricData[`Y${yearNum}Q4`]?.value ?? 0, is_calculated: true };
+              }
+            });
+
+            yearlyData[year] = yearly;
+          });
+
+          setSheetData(yearlyData);
+        } else {
+          // Quarter view: use stress data directly
+          setSheetData(stressData);
+        }
+
+        return;
+      }
+
+      // Normal API fetch
+      if (viewMode === "year") {
+        const allData: any = {};
+        for (let year = 1; year <= 5; year++) {
+          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+          const data = await res.json();
+          allData[`Year ${year}`] = data;
+        }
+        setSheetData(allData);
+      } else {
+        const yearNum = selectedYear.replace("Year ", "");
+        const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const data = await res.json();
+        setSheetData(data);
+      }
+    } catch (err) {
+      console.error("Error fetching unit economics data:", err);
+    }
+  };
+
+  fetchData();
+}, [viewMode, selectedYear, stressTestingActive, stressTestData]);
+
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;

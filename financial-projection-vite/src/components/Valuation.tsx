@@ -51,37 +51,87 @@ const Valuation: React.FC<ValuationProps> = ({ stressTestData }) => {
   }, []);
 
   // ✅ Fetch valuation data (fixed for Year Wise mode)
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (stressTestingActive && stressTestData) {
-          setSheetData(stressTestData[sheetType]);
-          return;
-        }
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      // ✅ Handle stress testing data first
+      if (stressTestingActive && stressTestData) {
+        const stressData = stressTestData[sheetType];
 
         if (viewMode === "year") {
-          // Fetch all 5 years of valuation data for Year Wise mode
-          const allData: any = {};
-          for (let year = 1; year <= 5; year++) {
-            const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
-            const data = await res.json();
-            allData[`Year ${year}`] = data;
-          }
-          setSheetData(allData);
-        } else {
-          // Fetch selected year only for Quarter Wise
-          const yearNum = selectedYear.replace("Year ", "");
-          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
-          const data = await res.json();
-          setSheetData(data);
-        }
-      } catch (err) {
-        console.error("Error fetching valuation data:", err);
-      }
-    };
+          const yearlyData: any = {};
+          yearsList.forEach((year, yIdx) => {
+            const yearNum = yIdx + 1;
+            const yearly: any = {};
 
-    fetchData();
-  }, [selectedYear, stressTestingActive, stressTestData, viewMode]);
+            valuationMetrics.forEach(metric => {
+              const metricData = stressData[metric.label] || {};
+              const quarterKeys = ["Q1", "Q2", "Q3", "Q4"].map((q, qIdx) => `Y${yearNum}Q${qIdx + 1}`);
+
+              if (metric.type === "auto") {
+                if (metric.label.includes("Valuation")) {
+                  // Compute auto valuation metrics based on input multiples
+                  let value = 0;
+                  if (metric.label === "Revenue-based Valuation") {
+                    const revenueMultiple = stressData["Revenue Multiple"]?.[`Y${yearNum}Q4`]?.value ?? 0;
+                    const revenue = stressData["Revenue"]?.[`Y${yearNum}Q4`]?.value ?? 0;
+                    value = revenue * revenueMultiple;
+                  } else if (metric.label === "EBITDA-based Valuation") {
+                    const ebitdaMultiple = stressData["EBITDA Multiple"]?.[`Y${yearNum}Q4`]?.value ?? 0;
+                    const ebitda = stressData["EBITDA"]?.[`Y${yearNum}Q4`]?.value ?? 0;
+                    value = ebitda * ebitdaMultiple;
+                  } else if (metric.label === "Customer-based Valuation") {
+                    const customerMultiple = stressData["Customer Multiple (₹)"]?.[`Y${yearNum}Q4`]?.value ?? 0;
+                    const customers = stressData["Customers"]?.[`Y${yearNum}Q4`]?.value ?? 0;
+                    value = customers * customerMultiple;
+                  }
+                  yearly[metric.label] = { value, is_calculated: true };
+                } else {
+                  // Default: sum Q1-Q4
+                  const sum = quarterKeys.reduce((acc, qKey) => acc + (metricData[qKey]?.value ?? 0), 0);
+                  yearly[metric.label] = { value: sum, is_calculated: true };
+                }
+              } else {
+                // Inputs: take Q4 snapshot for year
+                yearly[metric.label] = { value: metricData[`Y${yearNum}Q4`]?.value ?? 0, is_calculated: true };
+              }
+            });
+
+            yearlyData[year] = yearly;
+          });
+
+          setSheetData(yearlyData);
+        } else {
+          // Quarter view: use stress data directly
+          setSheetData(stressData);
+        }
+
+        return;
+      }
+
+      // Normal API fetch
+      if (viewMode === "year") {
+        const allData: any = {};
+        for (let year = 1; year <= 5; year++) {
+          const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
+          const data = await res.json();
+          allData[`Year ${year}`] = data;
+        }
+        setSheetData(allData);
+      } else {
+        const yearNum = selectedYear.replace("Year ", "");
+        const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
+        const data = await res.json();
+        setSheetData(data);
+      }
+    } catch (err) {
+      console.error("Error fetching valuation data:", err);
+    }
+  };
+
+  fetchData();
+}, [selectedYear, viewMode, stressTestingActive, stressTestData]);
+
 
   const updateCellAPI = async (fieldName: string, quarterIdx: number, value: number) => {
     if (stressTestingActive || !isManager) return;
