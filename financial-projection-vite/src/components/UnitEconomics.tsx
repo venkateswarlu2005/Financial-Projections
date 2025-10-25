@@ -8,14 +8,14 @@ const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const yearsList = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
 
 const metricItems = [
-  { name: "CAC (Customer Acquisition Cost)", label: "CAC (Customer Acquisition Cost)", type: "auto" },
-  { name: "ARPU (Average Revenue Per User)", label: "ARPU (Average Revenue Per User)", type: "auto" },
-  { name: "Gross Margin (%)", label: "Gross Margin (%)", type: "auto" },
-  { name: "Churn Rate (%)", label: "Churn Rate (%)", type: "auto" },
-  { name: "Average Customer Lifetime (Months)", label: "Average Customer Lifetime (Months)", type: "auto", addGapAfter: true },
-  { name: "LTV (Lifetime Value)", label: "LTV (Lifetime Value)", type: "auto" },
-  { name: "LTV/CAC Ratio", label: "LTV/CAC Ratio", type: "auto" },
-  { name: "Payback Period (Months)", label: "Payback Period (Months)", type: "auto" },
+  { name: "CAC (Customer Acquisition Cost)", label: "CAC (Customer Acquisition Cost)", type: "auto", yearlySum: false },
+  { name: "ARPU (Average Revenue Per User)", label: "ARPU (Average Revenue Per User)", type: "auto", yearlySum: false },
+  { name: "Gross Margin (%)", label: "Gross Margin (%)", type: "auto", yearlySum: false },
+  { name: "Churn Rate (%)", label: "Churn Rate (%)", type: "auto", yearlySum: false },
+  { name: "Average Customer Lifetime (Months)", label: "Average Customer Lifetime (Months)", type: "auto", addGapAfter: true, yearlySum: false },
+  { name: "LTV (Lifetime Value)", label: "LTV (Lifetime Value)", type: "auto", yearlySum: false },
+  { name: "LTV/CAC Ratio", label: "LTV/CAC Ratio", type: "auto", yearlySum: false },
+  { name: "Payback Period (Months)", label: "Payback Period (Months)", type: "auto", yearlySum: false },
 ];
 
 interface UnitEconomicsProps {
@@ -41,6 +41,7 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
       ? quarters.map((q, i) => ({ label: q, key: getQuarterKey(selectedYear, i) }))
       : yearsList.map((_y, i) => ({ label: `Y${i + 1}`, key: `Y${i + 1}Q4` }));
 
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -51,17 +52,43 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ✅ Updated fetch logic (Option 1)
+  // ✅ Fetch logic with stress testing Year Wise support
   useEffect(() => {
     const fetchData = async () => {
       try {
         if (stressTestingActive && stressTestData) {
-          setSheetData(stressTestData[sheetType]);
+          const stressData = stressTestData[sheetType];
+
+          if (viewMode === "year") {
+            const yearlyData: any = {};
+            yearsList.forEach((year, yIdx) => {
+              yearlyData[year] = {};
+              metricItems.forEach((metric) => {
+                const yearKey = `Y${yIdx + 1}Q`;
+                const metricData = stressData[metric.name] || {};
+
+                if (metric.yearlySum) {
+                  // Sum across all 4 quarters
+                  let sum = 0;
+                  for (let q = 1; q <= 4; q++) {
+                    sum += metricData[`${yearKey}${q}`]?.value ?? 0;
+                  }
+                  yearlyData[year][metric.name] = { [`Y${yIdx + 1}Q4`]: { value: sum, is_calculated: true } };
+                } else {
+                  // Snapshot/average → Q4 only
+                  yearlyData[year][metric.name] = { [`Y${yIdx + 1}Q4`]: { value: metricData[`${yearKey}4`]?.value ?? 0, is_calculated: true } };
+                }
+              });
+            });
+            setSheetData(yearlyData);
+          } else {
+            setSheetData(stressData);
+          }
           return;
         }
 
+        // Normal fetch
         if (viewMode === "year") {
-          // Fetch all years at once
           const allData: any = {};
           for (let year = 1; year <= 5; year++) {
             const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${year}`);
@@ -70,7 +97,6 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
           }
           setSheetData(allData);
         } else {
-          // Fetch only selected year for quarter view
           const yearNum = selectedYear.replace("Year ", "");
           const res = await fetch(`http://localhost:8000/api/sheet-data/${sheetType}/${yearNum}`);
           const data = await res.json();
@@ -211,13 +237,19 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
                     </td>
 
                     {getDisplayedQuarters().map((q, qIdx) => {
+                      let value = 0;
                       const yearKey = viewMode === "year" ? `Year ${q.label.replace("Y", "")}` : selectedYear;
-                      const metricData =
+
+                      if (viewMode === "year") {
+                        value = sheetData?.[yearKey]?.[metric.name]?.[q.key]?.value ?? 0;
+                      } else {
+                        value = sheetData?.[metric.name]?.[q.key]?.value ?? 0;
+                      }
+
+                      const isCalculated =
                         viewMode === "year"
-                          ? sheetData?.[yearKey]?.[metric.label]?.[q.key]
-                          : sheetData?.[metric.label]?.[q.key];
-                      const value = metricData?.value ?? 0;
-                      const isCalculated = metricData?.is_calculated ?? false;
+                          ? true
+                          : sheetData?.[metric.name]?.[q.key]?.is_calculated ?? false;
 
                       return (
                         <td key={qIdx}>
@@ -233,23 +265,18 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
                                 const newValue = parseFloat(e.target.value) || 0;
                                 setSheetData((prev: any) => ({
                                   ...prev,
-                                  [metric.label]: {
-                                    ...prev[metric.label],
-                                    [q.key]: {
-                                      ...prev[metric.label]?.[q.key],
-                                      value: newValue,
-                                      is_calculated: false,
-                                    },
+                                  [metric.name]: {
+                                    ...prev[metric.name],
+                                    [q.key]: { value: newValue, is_calculated: false },
                                   },
                                 }));
                               }}
                               onBlur={(e) => {
                                 if (!stressTestingActive && isManager)
-                                  updateCellAPI(metric.label, qIdx, parseFloat(e.target.value) || 0);
+                                  updateCellAPI(metric.name, qIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
-                                if (!stressTestingActive && isManager && e.key === "Enter")
-                                  e.currentTarget.blur();
+                                if (!stressTestingActive && isManager && e.key === "Enter") e.currentTarget.blur();
                               }}
                             />
                           ) : (
