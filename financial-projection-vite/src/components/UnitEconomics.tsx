@@ -29,7 +29,6 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [stressTestingActive, setStressTestingActive] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
   const sheetType = "unit-economics";
   const [sheetData, setSheetData] = useState<any>({});
 
@@ -52,7 +51,7 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ✅ Fetch logic with stress testing Year Wise support
+  // Fetch data including stress testing logic
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -67,16 +66,13 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
                 const yearKey = `Y${yIdx + 1}Q`;
                 const metricData = stressData[metric.name] || {};
 
-                if (metric.yearlySum) {
-                  // Sum across all 4 quarters
-                  let sum = 0;
-                  for (let q = 1; q <= 4; q++) {
-                    sum += metricData[`${yearKey}${q}`]?.value ?? 0;
-                  }
-                  yearlyData[year][metric.name] = { [`Y${yIdx + 1}Q4`]: { value: sum, is_calculated: true } };
-                } else {
-                  // Snapshot/average → Q4 only
-                  yearlyData[year][metric.name] = { [`Y${yIdx + 1}Q4`]: { value: metricData[`${yearKey}4`]?.value ?? 0, is_calculated: true } };
+                // Copy all 4 quarters for proper yearly calculation
+                yearlyData[year][metric.name] = {};
+                for (let q = 1; q <= 4; q++) {
+                  yearlyData[year][metric.name][`${yearKey}${q}`] = {
+                    value: metricData[`${yearKey}${q}`]?.value ?? 0,
+                    is_calculated: true,
+                  };
                 }
               });
             });
@@ -241,15 +237,23 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
                       const yearKey = viewMode === "year" ? `Year ${q.label.replace("Y", "")}` : selectedYear;
 
                       if (viewMode === "year") {
-                        value = sheetData?.[yearKey]?.[metric.name]?.[q.key]?.value ?? 0;
+                        const yearData = sheetData?.[yearKey]?.[metric.name] || {};
+                        if (metric.yearlySum) {
+                          value = Object.values(yearData).reduce(
+                            (acc: number, cur: any) => acc + (cur.value ?? 0),
+                            0
+                          );
+                        } else {
+                          value = yearData?.[`Y${q.label.replace("Y", "")}Q4`]?.value ?? 0;
+                        }
                       } else {
                         value = sheetData?.[metric.name]?.[q.key]?.value ?? 0;
                       }
 
                       const isCalculated =
-                        viewMode === "year"
-                          ? true
-                          : sheetData?.[metric.name]?.[q.key]?.is_calculated ?? false;
+                        viewMode === "quarter"
+                          ? sheetData?.[metric.name]?.[q.key]?.is_calculated ?? false
+                          : true;
 
                       return (
                         <td key={qIdx}>
@@ -259,7 +263,11 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
                               className="form-control form-control-sm"
                               value={value}
                               readOnly={stressTestingActive || !isManager}
-                              style={stressTestingActive || !isManager ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}}
+                              style={
+                                stressTestingActive || !isManager
+                                  ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" }
+                                  : {}
+                              }
                               onChange={(e) => {
                                 if (stressTestingActive || !isManager) return;
                                 const newValue = parseFloat(e.target.value) || 0;
@@ -276,7 +284,8 @@ const UnitEconomics: React.FC<UnitEconomicsProps> = ({ stressTestData }) => {
                                   updateCellAPI(metric.name, qIdx, parseFloat(e.target.value) || 0);
                               }}
                               onKeyDown={(e) => {
-                                if (!stressTestingActive && isManager && e.key === "Enter") e.currentTarget.blur();
+                                if (!stressTestingActive && isManager && e.key === "Enter")
+                                  e.currentTarget.blur();
                               }}
                             />
                           ) : (
