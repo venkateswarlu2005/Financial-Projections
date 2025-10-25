@@ -493,7 +493,7 @@ function ChartCard({
           style={{ display: "flex", alignItems: "center", gap: "10px" }}
         >
           {/* Quarter/Year toggle - HIDE FOR DOUGHNUT */}
-          {chartType !== "doughnut" && (
+          
             <div className="pill-toggle">
               <button
                 className={`pill-toggle-btn ${
@@ -512,7 +512,7 @@ function ChartCard({
                 Year Wise
               </button>
             </div>
-          )}
+          
 
           {/* Year Dropdown - HIDE FOR YEAR WISE MODE */}
           {viewMode === "quarter" && (
